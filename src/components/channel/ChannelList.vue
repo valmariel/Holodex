@@ -98,15 +98,20 @@
                     <ChannelImg :channel="channel" size="55" />
                 </v-list-item-avatar>
                 <ChannelInfo :channel="channel" :includeVideoCount="includeVideoCount">
-                    <ChannelSocials :channel="channel" class="pa-0 justify-start" v-if="isXs" />
+                    <ChannelSocials
+                        :channel="channel"
+                        class="pa-0 justify-start"
+                        v-if="isXs"
+                        :showDelete="showDelete"
+                    />
                 </ChannelInfo>
-                <ChannelSocials :channel="channel" v-if="!isXs" />
+                <ChannelSocials :channel="channel" v-if="!isXs" :showDelete="showDelete" />
             </v-list-item>
         </template>
     </v-list>
 </template>
 
-<script>
+<script lang="ts">
 import * as icons from "@/utils/icons";
 import ChannelImg from "./ChannelImg.vue";
 import ChannelInfo from "./ChannelInfo.vue";
@@ -118,7 +123,7 @@ export default {
         ChannelImg,
         ChannelInfo,
         ChannelSocials,
-        ChannelCard: () => import("./ChannelCard"),
+        ChannelCard: () => import("./ChannelCard.vue"),
     },
     data() {
         return {
@@ -139,6 +144,10 @@ export default {
             default: false,
         },
         grouped: {
+            type: Boolean,
+            default: false,
+        },
+        showDelete: {
             type: Boolean,
             default: false,
         },

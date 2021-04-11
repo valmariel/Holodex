@@ -4,7 +4,7 @@
             <v-col>
                 <div class="text-h4">{{ $t("views.settings.title") }}</div>
                 <div class="pt-4">
-                    <v-icon>{{ mdiTranslate }}</v-icon>
+                    <v-icon>{{ icons.mdiTranslate }}</v-icon>
                     Language:
                 </div>
                 <v-radio-group v-model="language" dense fluid>
@@ -35,6 +35,11 @@
                     v-model="darkMode"
                     :label="$t('views.settings.darkModeLabel')"
                     :messages="$t('views.settings.darkModeMsg')"
+                ></v-switch>
+                <v-switch
+                    v-model="defaultOpenFavorites"
+                    :label="$t('views.settings.defaultFavorites')"
+                    :messages="$t('views.settings.defaultFavoritesMsg')"
                 ></v-switch>
                 <v-switch
                     v-model="redirectMode"
@@ -75,9 +80,9 @@
     </v-container>
 </template>
 
-<script>
+<script lang="ts">
 import { langs } from "@/plugins/vuetify";
-import { mdiTranslate, mdiFilter } from "@mdi/js";
+import { mdiFilter } from "@mdi/js";
 import { TL_LANGS } from "@/utils/consts";
 
 export default {
@@ -151,16 +156,23 @@ export default {
             get() {
                 return this.$store.state.settings.clipLangs;
             },
-            set(val) {
+            set(val: any[]) {
                 // sort array to increase cache hit rate
                 this.$store.commit("settings/setClipLangs", val.sort());
+            },
+        },
+        defaultOpenFavorites: {
+            get() {
+                return this.$store.state.settings.defaultOpenFavorites;
+            },
+            set(val) {
+                this.$store.commit("settings/setDefaultOpenFavorites", val);
             },
         },
     },
     data() {
         return {
             langs,
-            mdiTranslate,
             mdiFilter,
             TL_LANGS,
         };

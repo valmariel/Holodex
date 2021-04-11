@@ -19,6 +19,8 @@ component:
   channelSocials:
     addToFavorites: Tambahkan pada Kegemaran
     removeFromFavorites: Alih keluar daripada Kegemaran
+    unblock: Nyahsekat saluran ini
+    block: Sekat kandungan saluran ini di seluruh Holodex
   mainNav:
     home: Laman Utama
     favorites: Kegemaran
@@ -39,8 +41,6 @@ component:
     edit: Sunting
   videoDescription:
     description: Perihalan
-  video:
-    comment: { }
   description:
     showLess: Tunjukkan Kurang
     showMore: Tunjukkan Lagi
@@ -90,7 +90,6 @@ component:
       beforeExportIcon: Tekan
 views:
   channels:
-    channelType: { }
     sortOptions:
       subscribers: Langganan
       group: Pecahan
@@ -101,7 +100,9 @@ views:
       Vtuber: Penggiat YouTube maya
       Subber: Penyari Kata
       Favorites: Kegemaran
+      Blocked: Disekat
     favoritesAreEmpty: Tiada kegemaran lagi!
+    blockedAreEmpty: Tiada saluran yang disekat.
   home:
     liveOrUpcomingHeading: Langsung / Akan Datang
     recentVideosHeading: Video Terkini

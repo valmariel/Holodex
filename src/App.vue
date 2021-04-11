@@ -5,7 +5,7 @@
     >
         <MainNav />
         <v-main class="pull-to-refresh" style="transition: none">
-            <keep-alive max="4" exclude="Watch,MugenClips,EditVideo,MultiView">
+            <keep-alive max="4" exclude="Watch,MugenClips,EditVideo,MultiView,Channel">
                 <router-view :key="viewKey" />
             </keep-alive>
         </v-main>
@@ -27,7 +27,7 @@
     </v-app>
 </template>
 
-<script>
+<script lang="ts">
 import MainNav from "@/components/nav/MainNav.vue";
 import pulltorefresh from "vue-awesome-pulltorefresh";
 import { dayjsLangs } from "./plugins/vuetify";
@@ -70,6 +70,7 @@ export default {
         return {
             updateExists: false,
             registration: null,
+            favoritesUpdateTask: null,
         };
     },
     created() {
@@ -82,7 +83,7 @@ export default {
         // check for pwa updates
         document.addEventListener(
             "swUpdated",
-            (event) => {
+            (event: CustomEvent<any>) => {
                 this.registration = event.detail;
                 this.updateExists = true;
             },
@@ -102,8 +103,17 @@ export default {
             window.location.reload();
         });
 
+        if (this.favoritesUpdateTask) clearInterval(this.favoritesUpdateTask);
+
+        this.favoritesUpdateTask = setInterval(() => {
+            this.$store.dispatch("favorites/fetchLive", { minutes: 10 });
+        }, 15 * 60 * 1000);
+
         // check current breakpoint and set isMobile
         this.updateIsMobile();
+    },
+    beforeDestroy() {
+        if (this.favoritesUpdateTask) clearInterval(this.favoritesUpdateTask);
     },
     mounted() {
         const self = this;
@@ -140,7 +150,7 @@ export default {
                     // disable on watch page
                     !self.isWatchPage &&
                     // disable on mobile when navdrawer is pulled out
-                    self.$store.state.isMobile &&
+                    // self.$store.state.isMobile && (removing restriction on mobile)
                     !self.$store.state.navDrawer
                 );
             },
@@ -153,7 +163,7 @@ export default {
             // channel has subviewws that will cause unwanted keep-alive instances
             // Key them all under channel/:id to avoid duplicating
             if (key.match("^/channel/.{16}")) {
-                return key.substring(0, 34);
+                return key.substring(0, 33);
             }
             return key;
         },
@@ -291,6 +301,10 @@ body {
         -webkit-transform: rotate(360deg);
         transform: rotate(360deg);
     }
+}
+
+.thin-scroll-bar {
+    scrollbar-width: thin;
 }
 
 .thin-scroll-bar::-webkit-scrollbar {

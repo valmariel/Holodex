@@ -62,7 +62,7 @@
                     hide-details
                     :class="doneCopy ? 'green lighten-2' : ''"
                     :value="userdata.user.api_key || 'None on file'"
-                    :append-icon="mdiClipboardPlusOutline"
+                    :append-icon="icons.mdiClipboardPlusOutline"
                     @click:append="copyToClipboard(userdata.user.api_key)"
                 ></v-text-field>
                 <br />
@@ -75,7 +75,7 @@
     </v-container>
 </template>
 
-<script>
+<script lang="ts">
 import GAuth from "vue-google-oauth2";
 import open from "oauth-open";
 import api from "@/utils/backend-api";
@@ -83,7 +83,6 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import Vue from "vue";
 import UserCard from "@/components/user/UserCard.vue";
-import { mdiClipboardPlusOutline } from "@mdi/js";
 import copyToClipboard from "@/mixins/copyToClipboard";
 
 dayjs.extend(utc);
@@ -115,7 +114,6 @@ export default {
     components: { UserCard },
     data() {
         return {
-            mdiClipboardPlusOutline,
             doneCopy: false,
         };
     },
@@ -162,10 +160,10 @@ export default {
         },
         async forceUserUpdate() {
             const check = await api.loginIsValid(this.userdata.jwt);
-            if (check.data && check.data.id) {
-                this.$store.commit("setUser", { user: check.data, jwt: this.userdata.jwt });
-            } else {
+            if (check === false) {
                 this.$store.dispatch("logout");
+            } else if (check.data && check.data.id) {
+                this.$store.commit("setUser", { user: check.data, jwt: this.userdata.jwt });
             }
         },
         async resetKey() {

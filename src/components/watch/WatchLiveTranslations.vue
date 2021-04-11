@@ -1,11 +1,11 @@
 <template>
     <v-card class="text-body-2 tl-overlay" tile flat>
-        <v-overlay absolute :value="showOverlay || (socket && socket.disconnected)" opacity="0.8">
+        <v-overlay absolute :value="showOverlay || $socket.disconnected" opacity="0.8">
             <div v-if="isLoading">{{ $t("views.watch.chat.loading") }}</div>
             <div class="pa-3" v-else>{{ overlayMessage }}</div>
-            <v-btn v-if="!isLoading" @click="tlChatConnect()">{{ $t("views.watch.chat.retryBtn") }}</v-btn>
+            <v-btn v-if="!isLoading" @click="tlJoin()">{{ $t("views.watch.chat.retryBtn") }}</v-btn>
         </v-overlay>
-        <v-card-subtitle class="py-2 d-flex justify-space-between">
+        <v-card-subtitle class="py-1 d-flex justify-space-between">
             <div>
                 TLs [{{ liveTlLang }}]
                 <span :class="connected ? 'green--text' : 'red--text'">
@@ -16,7 +16,7 @@
                     }}
                 </span>
             </div>
-            <v-dialog v-model="dialog">
+            <v-dialog v-model="dialog" width="500">
                 <template v-slot:activator="{ on, attrs }">
                     <v-btn icon x-small v-bind="attrs" v-on="on">
                         <v-icon>
@@ -68,13 +68,14 @@
     </v-card>
 </template>
 
-<script>
-// eslint-disable-next-line import/no-unresolved
-import { Manager } from "socket.io-client";
+<script lang="ts">
 import api, { API_BASE_URL } from "@/utils/backend-api";
 import { formatDuration, dayjs } from "@/utils/time";
 import { TL_LANGS } from "@/utils/consts";
 import { debounce } from "@/utils/functions";
+import VueSocketIOExt from "vue-socket.io-extended";
+import { Manager } from "socket.io-client";
+import Vue from "vue";
 
 export default {
     name: "WatchLiveTranslations",
@@ -98,22 +99,68 @@ export default {
             overlayMessage: this.$t("views.watch.chat.loading"),
             showOverlay: false,
             isLoading: true,
-            manager: null,
-            socket: null,
             dialog: false,
+            success: false,
         };
     },
+    sockets: {
+        reconnect_attempt(attempt) {
+            const vm = this as any;
+            vm.overlayMessage = `${this.$t("views.watch.chat.status.reconnecting")} ${attempt}/10`;
+        },
+        reconnect_failed() {
+            const vm = this as any;
+            vm.overlayMessage = this.$t("views.watch.chat.status.reconnectFailed");
+        },
+        connect_error() {
+            const vm = this as any;
+            vm.overlayMessage = this.$t("views.watch.chat.status.reconnectFailed");
+        },
+        // Sucessfully connected to live stream chat
+        subscribeSuccess(obj) {
+            const vm = this as any;
+            // make sure to not listen to duplicate events of the same id (i.e. same chat room open in mv)
+            if (obj.id === vm.video.id && !vm.success) {
+                vm.success = true;
+                vm.registerListener();
+                vm.$store.commit("incrementActiveSockets");
+            }
+        },
+        // Failed to join the chat room
+        subscribeError(obj) {
+            const vm = this as any;
+            if (obj.id === vm.video.id) {
+                vm.overlayMessage = obj.message;
+                vm.isLoading = false;
+                vm.showOverlay = true;
+            }
+        },
+    },
+    created() {
+        const manager = new Manager(
+            /* process.env.NODE_ENV === "development" ? "http://localhost:2434" : */ API_BASE_URL,
+            {
+                reconnectionAttempts: 10,
+                transports: ["websocket"],
+                upgrade: false,
+                path: /* process.env.NODE_ENV !== "development" && */ "/api/socket.io/",
+                secure: true,
+                autoConnect: false,
+            },
+        );
+
+        Vue.use(VueSocketIOExt, manager.socket("/"));
+    },
     mounted() {
-        this.tlChatConnect();
+        this.tlJoin();
     },
     beforeDestroy() {
-        this.tlChatDisconnect();
+        this.tlLeave();
     },
     watch: {
         liveTlLang() {
-            // this.tlChatReconnect();
-            this.tlChatDisconnect();
-            this.tlChatConnect();
+            this.tlLeave();
+            this.tlJoin();
         },
     },
     computed: {
@@ -137,39 +184,45 @@ export default {
             },
         },
         connected() {
-            return this.socket && !this.socket.disconnected;
+            return this.$socket.connected;
         },
     },
     methods: {
+        registerListener() {
+            const vm = this as any;
+            this.$socket.client.on(`${vm.video.id}/${vm.liveTlLang}`, (msg) => {
+                // if no type, process as regular message
+                if (!msg.type) {
+                    vm.tlHistory.unshift(msg);
+                    vm.$emit("historyLength", vm.tlHistory.length);
+                    return;
+                }
+                switch (msg.type) {
+                    case vm.MESSAGE_TYPES.UPDATE:
+                        vm.$emit("videoUpdate", msg);
+                        break;
+                    case vm.MESSAGE_TYPES.END:
+                        vm.overlayMessage = msg.message;
+                        // this.showOverlay = true;
+                        vm.tlLeave();
+                        break;
+                    case vm.MESSAGE_TYPES.ERROR:
+                        vm.overlayMessage = "An unexpected error occured";
+                        // this.showOverlay = true;
+                        vm.tlLeave();
+                        break;
+                    default:
+                        break;
+                }
+            });
+        },
         // eslint-disable-next-line func-names
-        tlChatConnect: debounce(function () {
-            if (!this.manager) {
-                this.manager = new Manager(
-                    process.env.NODE_ENV === "development" ? "http://localhost:2434" : API_BASE_URL,
-                    {
-                        query: { id: this.video.id },
-                        reconnectionAttempts: 10,
-                        transports: ["websocket"],
-                        upgrade: false,
-                        path: process.env.NODE_ENV !== "development" && "/api/socket.io/",
-                        secure: true,
-                    },
-                );
-                this.manager.on("reconnect_attempt", (attempt) => {
-                    this.overlayMessage = `${this.$t("views.watch.chat.status.reconnecting")} ${attempt}/10`;
-                });
-                this.manager.on("reconnect_failed", () => {
-                    this.overlayMessage = this.$t("views.watch.chat.status.reconnectFailed");
-                });
-            }
-
+        tlJoin: debounce(function () {
+            // Disallow users from joining a chat room that doesn't exist yet
+            // Backend will create a chatroom when it's 15 minutes before a stream
             if (
                 this.video.status !== "live" &&
-                !dayjs().isAfter(
-                    dayjs(this.video.start_scheduled)
-                        // .subtract(8, "hours")
-                        .subtract(15, "minutes"),
-                )
+                !dayjs().isAfter(dayjs(this.video.start_scheduled).subtract(15, "minutes"))
             ) {
                 this.overlayMessage = this.$t("views.watch.chat.status.notLive");
                 this.isLoading = false;
@@ -178,72 +231,31 @@ export default {
             }
             this.isLoading = true;
 
-            this.socket = this.manager.socket("/");
-            this.socket.connect();
+            // Start the unified socket if it isn't already
+            if (this.$socket.disconnected) {
+                this.$socket.client.connect();
+            }
 
+            // Grab chat history
             api.chatHistory(this.video.id, this.liveTlLang).then(({ data }) => {
                 this.tlHistory = data.reverse();
             });
-            this.socket.emit("subscribe", { video_id: this.video.id, lang: this.liveTlLang });
 
-            this.socket.on("subscribeError", (err) => {
-                this.overlayMessage = err.message;
-                this.isLoading = false;
-                this.showOverlay = true;
-                this.tlChatDisconnect();
-            });
-            this.socket.on("subscribeSuccess", () => {
-                this.showOverlay = false;
-                this.isLoading = false;
-            });
-
-            this.socket.on("connect_error", (err) => {
-                console.log(err);
-                this.overlayMessage = err;
-                this.isLoading = false;
-                this.showOverlay = true;
-            });
-
-            this.socket.on(`${this.video.id}/${this.liveTlLang}`, (msg) => {
-                // if no type, process as regular message
-                if (!msg.type) {
-                    this.tlHistory.unshift(msg);
-                    this.$emit("historyLength", this.tlHistory.length);
-                    return;
-                }
-                switch (msg.type) {
-                    case this.MESSAGE_TYPES.UPDATE:
-                        this.$emit("videoUpdate", msg);
-                        break;
-                    case this.MESSAGE_TYPES.END:
-                        this.overlayMessage = msg.message;
-                        // this.showOverlay = true;
-                        this.tlChatDisconnect();
-                        break;
-                    case this.MESSAGE_TYPES.ERROR:
-                        this.overlayMessage = "An unexpected error occured";
-                        // this.showOverlay = true;
-                        this.tlChatDisconnect();
-                        break;
-                    default:
-                        break;
-                }
-                // console.log(msg);
-            });
+            // Try to join chat room with specified language
+            this.$socket.client.emit("subscribe", { video_id: this.video.id, lang: this.liveTlLang });
         }, 300),
-        tlChatDisconnect() {
-            if (this.socket) {
-                this.socket.disconnect(true);
-                this.socket = null;
-                this.manager = null;
+        tlLeave() {
+            const vm = this as any;
+            // only disconnect and derement socket if it succeeded
+            if (vm.success) {
+                vm.$store.commit("decrementActiveSockets");
+                vm.$socket.client.emit("unsubscribe", { video_id: vm.video.id, lang: vm.liveTlLang });
+                vm.$socket.client.off(`${vm.video.id}/${vm.liveTlLang}`);
+                vm.$store.dispatch("checkActiveSockets");
             }
         },
-        // tlChatReconnect() {
-        //     this.isLoading = true;
-        //     this.tlChatConnect();
-        // },
         utcToTimestamp(utc) {
-            return formatDuration(dayjs.utc(utc).subtract(dayjs(this.video.start_actual)));
+            return formatDuration(dayjs.utc(utc).subtract(Number(dayjs(this.video.start_actual))));
         },
     },
 };
@@ -257,7 +269,7 @@ export default {
 .tl-body {
     overflow-y: auto;
     overscroll-behavior: contain;
-    height: 20vh;
+    height: calc(100% - 32px);
 }
 
 .tl-overlay {

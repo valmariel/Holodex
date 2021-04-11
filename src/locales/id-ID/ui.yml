@@ -19,6 +19,8 @@ component:
   channelSocials:
     addToFavorites: Tambahkan ke Favorit
     removeFromFavorites: Hapus dari Favorit
+    unblock: Batalkan blokiran channel ini
+    block: Blokir konten channel ini di Holodex
   mainNav:
     home: Beranda
     favorites: Favorit
@@ -37,10 +39,10 @@ component:
     watching: '{0} sedang menonton'
     liveNow: Sedang Berlangsung
     edit: Ubah
+    copiedToClipboard: Tautan disalin ke clipboard.
+    copyLink: Salin Tautan Holodex
   videoDescription:
     description: Deskripsi
-  video:
-    comment: { }
   description:
     showLess: Tampilkan lebih sedikit
     showMore: Tampilkan lebih banyak
@@ -90,7 +92,6 @@ component:
       beforeExportIcon: Tekan
 views:
   channels:
-    channelType: { }
     sortOptions:
       subscribers: Subscriber
       group: Grup
@@ -101,7 +102,9 @@ views:
       Vtuber: Vtuber
       Subber: Subber
       Favorites: Favorit
+      Blocked: Diblokir
     favoritesAreEmpty: Kamu tidak memiliki favorit!
+    blockedAreEmpty: Kamu tidak memblokir channel manapun.
   home:
     liveOrUpcomingHeading: Sedang Berlangsung / Akan Tayang
     recentVideosHeading: Video Terkini

@@ -77,7 +77,7 @@
     <LoadingOverlay :isLoading="isLoading" :showError="hasError" v-else />
 </template>
 
-<script>
+<script lang="ts">
 import VueYouTubeEmbed from "vue-youtube-embed";
 import Vue from "vue";
 import LoadingOverlay from "@/components/common/LoadingOverlay.vue";
@@ -85,7 +85,6 @@ import WatchInfo from "@/components/watch/WatchInfo.vue";
 import WatchFrame from "@/components/watch/WatchFrame.vue";
 import WatchComments from "@/components/watch/WatchComments.vue";
 import WatchSideBar from "@/components/watch/WatchSideBar.vue";
-import WatchLiveChat from "@/components/watch/WatchLiveChat.vue";
 import VideoEditSongs from "@/components/media/VideoEditSongs.vue";
 import { decodeHTMLEntities } from "@/utils/functions";
 // import { dayjs } from "@/utils/time";
@@ -103,7 +102,6 @@ export default {
         LoadingOverlay,
         WatchInfo,
         WatchFrame,
-        WatchLiveChat,
         WatchSideBar,
         VideoEditSongs,
         WatchComments,
