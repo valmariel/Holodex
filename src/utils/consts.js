@@ -1,7 +1,61 @@
 /* eslint-disable no-useless-escape */
 
-export const primaryColor = "#F06292";
-export const secondaryColor = "#64B5F6";
+const aquaIro = {
+    primary: "#F06292",
+    secondary: "#64B5F6",
+};
+const koroneIro = {
+    primary: "#F4DBA2",
+    secondary: "#93D3CE",
+};
+// https://coolors.co/a8736d-f4dba2-f4d7cd-93d3ce-e46d8d <-- Korone color swatch
+
+export const themeSet = [
+    {
+        name: "Aqua",
+        id: 0,
+        themes: {
+            dark: {
+                background: "#121212",
+                ...aquaIro,
+            },
+            light: {
+                background: "#f2f2f2",
+                ...aquaIro,
+            },
+        },
+    },
+    {
+        name: "Matsuri",
+        id: 1,
+        themes: {
+            dark: {
+                background: "#121212",
+                primary: "#FCC281",
+                secondary: "#C4E167",
+            },
+            light: {
+                background: "#f2f2f2",
+                secondary: "#FCC281",
+                primary: "#379CB3",
+            },
+        },
+    },
+    {
+        name: "Korone",
+        id: 2,
+        themes: {
+            dark: {
+                background: "#121212",
+                ...koroneIro,
+            },
+            light: {
+                background: "#f2f2f2",
+                ...koroneIro,
+            },
+        },
+    },
+];
 
 export const CHANNEL_TYPES = Object.freeze({
     VTUBER: "vtuber",
@@ -40,6 +94,8 @@ export const ORGS = Object.freeze([
     "ReACT",
     ".LIVE",
     "VOMS",
+    "Riot Music",
+    "Masquerade",
     "Tsunderia",
     "Yuni Create",
     "Atelier Live",
@@ -66,6 +122,8 @@ export const ORGS_PREFIX = Object.freeze({
     "Kizuna Ai Inc.": "Kizuna",
     Marbl_s: "Marbl",
     Nijisanji: "Niji",
+    Masquerade: "Masq",
+    "Riot Music": "Riot",
     "Nori Pro": "Nori",
     // "ReACT",
     // "SugarLyric",

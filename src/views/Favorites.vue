@@ -1,8 +1,8 @@
 <template>
     <v-container fluid>
         <template v-if="isLoggedIn && favorites.length > 0">
-            <LoadingOverlay :isLoading="isLoading" :showError="hasError" />
-            <div v-show="!isLoading && !hasError">
+            <LoadingOverlay :isLoading="false" :showError="hasError" />
+            <div v-show="!hasError">
                 <div class="d-flex justify-space-between px-0 pb-3 pt-1 px-sm-3">
                     <div class="text-h6">
                         {{ $t("views.home.liveOrUpcomingHeading") }}
@@ -11,6 +11,7 @@
                         <v-icon>{{ $store.getters.gridIcon }}</v-icon>
                     </v-btn>
                 </div>
+                <SkeletonCardList v-if="isLoading" :cols="colSizes" :limitRows="2" :dense="currentGridSize > 0" />
                 <VideoCardList
                     :videos="sortedLive"
                     includeChannel
@@ -18,6 +19,7 @@
                     :limitRows="2"
                     :cols="colSizes"
                     :dense="currentGridSize > 0"
+                    v-else
                 >
                 </VideoCardList>
                 <v-divider class="my-3" />
@@ -37,18 +39,23 @@
                         </v-btn>
                     </v-btn-toggle>
                 </div>
-                <VideoCardList
-                    :videos="videos"
-                    includeChannel
-                    :cols="colSizes"
-                    :dense="currentGridSize > 0"
-                    :lazy="scrollMode"
-                    :identifier="identifier"
-                    :paginateLoad="!scrollMode"
+
+                <generic-list-loader
                     :infiniteLoad="scrollMode"
-                    @load="loadNext"
-                    pageLess
-                ></VideoCardList>
+                    :paginate="!scrollMode"
+                    :perPage="this.pageLength"
+                    :loadFn="getLoadFn()"
+                    v-slot="{ data, isLoading }"
+                    :key="'vl-home-' + recentVideoFilter + identifier"
+                >
+                    <VideoCardList
+                        :videos="data"
+                        includeChannel
+                        :cols="colSizes"
+                        :dense="currentGridSize > 0"
+                    ></VideoCardList>
+                    <SkeletonCardList v-if="isLoading" :cols="colSizes" :dense="currentGridSize > 0" />
+                </generic-list-loader>
             </div>
         </template>
         <template v-else>
@@ -73,6 +80,9 @@ import * as icons from "@/utils/icons";
 import { mapState } from "vuex";
 import reloadable from "@/mixins/reloadable";
 import isActive from "@/mixins/isActive";
+import backendApi from "@/utils/backend-api";
+import GenericListLoader from "@/components/video/GenericListLoader.vue";
+import SkeletonCardList from "@/components/video/SkeletonCardList.vue";
 
 export default {
     name: "Favorites",
@@ -88,6 +98,8 @@ export default {
     components: {
         VideoCardList,
         LoadingOverlay,
+        GenericListLoader,
+        SkeletonCardList,
     },
     data() {
         return {
@@ -100,24 +112,30 @@ export default {
         this.init(true);
     },
     watch: {
-        recentVideoFilter() {
-            this.resetVideos();
-        },
         favorites: {
             deep: true,
-            handler() {
-                if (isActive) this.init(false);
+            handler(nw, old) {
+                if (isActive && nw.find((c, index) => old[index] && c.id !== old[index].id)) {
+                    this.init(false);
+                }
             },
         },
     },
     computed: {
-        ...mapState("favorites", ["favorites", "live", "videos", "isLoading", "hasError", "currentOffset"]),
+        ...mapState("favorites", ["favorites", "live", "isLoading", "hasError", "currentOffset"]),
         recentVideoFilter: {
             get() {
                 return this.$store.state.favorites.recentVideoFilter;
             },
             set(value) {
                 this.$store.commit("favorites/setRecentVideoFilter", value);
+                this.identifier = Date.now();
+                this.$router.push({
+                    query: {
+                        ...this.$route.query,
+                        page: undefined,
+                    },
+                });
             },
         },
         isLoggedIn() {
@@ -155,39 +173,32 @@ export default {
         init(updateFavorites) {
             if (this.favorites.length > 0 && this.isLoggedIn) {
                 if (updateFavorites) this.$store.dispatch("favorites/fetchFavorites");
-                this.$store.dispatch("favorites/fetchLive", { minutes: 2 });
-                // this.$nextTick(this.resetVideos);
+                this.$store.dispatch("favorites/fetchLive", { force: true, minutes: 2 });
+                this.identifier = Date.now();
             }
         },
         reload() {
             this.init();
         },
-        resetVideos() {
-            this.$store.commit("favorites/resetVideos");
-            this.identifier = +new Date();
-        },
-        loadNext($state) {
-            const lastLength = this.videos.length;
-            if (!this.scrollMode) this.$store.commit("favorites/resetVideos");
-            this.$store
-                .dispatch("favorites/fetchNextVideos", {
-                    limit: this.pageLength,
-                    ...(!this.scrollMode && { offset: this.pageLength * ($state.page - 1) }),
-                })
-                .then(() => {
-                    if (
-                        (this.scrollMode && this.videos.length === lastLength) ||
-                        (!this.scrollMode && this.videos.length !== this.pageLength)
-                    ) {
-                        $state.completed();
-                        return;
-                    }
-                    $state.loaded();
-                })
-                .catch((e) => {
-                    console.error(e);
-                    $state.error();
-                });
+        getLoadFn() {
+            return async (offset, limit) => {
+                const res = await backendApi
+                    .favoritesVideos(this.$store.state.userdata.jwt, {
+                        status: "past",
+                        ...(this.recentVideoFilter !== "all" && { type: this.recentVideoFilter }),
+                        include: "clips",
+                        lang: this.$store.state.settings.clipLangs.join(","),
+                        paginated: !this.scrollMode,
+                        limit,
+                        offset,
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                        this.$store.dispatch("loginVerify"); // check if the user is actually logged in.
+                        throw err;
+                    });
+                return res.data;
+            };
         },
     },
 };

@@ -10,13 +10,13 @@
         ref="sheet"
     >
         <v-slider class="music-progress" hide-details :value="progress" height="3" @change="progressChange" />
-        <div class="d-flex justify-space-between pa-2">
-            <div class="player-controls">
+        <div class="d-flex justify-space-between pa-2" :class="{ 'flex-column': $vuetify.breakpoint.xs }">
+            <div class="player-controls d-flex align-center">
                 <v-btn icon class="mx-1" @click="prevButtonHandler">
                     <v-icon>{{ mdiSkipPrevious }}</v-icon>
                 </v-btn>
                 <v-btn icon fab @click="playPause" color="primary">
-                    <v-icon large>{{ playButtonIcon }}</v-icon>
+                    <v-icon x-large>{{ playButtonIcon }}</v-icon>
                 </v-btn>
                 <v-btn
                     icon
@@ -39,7 +39,6 @@
                     top
                     origin="right bottom"
                     transition="slide-y-reverse-transition"
-                    content-class="scrollable-music-queue"
                     min-width="30vw"
                     max-width="50vw"
                     max-height="50vh"
@@ -48,7 +47,6 @@
                 >
                     <template v-slot:activator="{ on }">
                         <v-btn
-                            color="transparent"
                             elevation="0"
                             :ripple="false"
                             class="queue-btn mx-1 px-1"
@@ -78,10 +76,15 @@
                         ><v-icon left>{{ mdiPlaylistRemove }}</v-icon> {{ $t("component.music.clearPlaylist") }}</v-btn
                     >
                 </v-slide-x-transition>
+                <div v-if="$vuetify.breakpoint.xs">
+                    <v-btn icon @click="closePlayer">
+                        <v-icon>{{ icons.mdiClose }}</v-icon>
+                    </v-btn>
+                </div>
             </div>
             <!-- < v-scroll-y-transition mode="out-in"> -->
             <transition :name="titleTransition" mode="out-in">
-                <div class="song-info d-flex align-center" :key="'snip' + (currentSong && currentSong.name)">
+                <div class="d-flex align-center" :key="'snip' + (currentSong && currentSong.name)">
                     <div class="pr-2">
                         <v-img
                             v-if="currentSong && currentSong.art"
@@ -92,7 +95,7 @@
                         ></v-img>
                     </div>
                     <div>
-                        <div class="single-line-clamp text-h6">
+                        <div class="text-h6">
                             {{ currentSong.name }}
                         </div>
                         <div class="single-line-clamp">
@@ -106,10 +109,38 @@
                             <span class="text-subtitle-2 text--secondary">({{ currentSong.original_artist }})</span>
                         </div>
                     </div>
+                    <div class="music-more-btn">
+                        <v-menu bottom nudge-top="20px">
+                            <template v-slot:activator="{ on }">
+                                <v-btn icon large v-on="on" @click.stop.prevent class="mt-1">
+                                    <v-icon>
+                                        {{ icons.mdiDotsVertical }}
+                                    </v-icon>
+                                </v-btn>
+                            </template>
+                            <v-list dense>
+                                <!-- <v-list-item @click.stop="" disabled
+                                    ><v-icon left>{{ icons.mdiClipboardPlusOutline }}</v-icon>
+                                    {{ $t("component.videoCard.copyLink") }}
+                                </v-list-item> -->
+                                <v-list-item
+                                    @click.stop
+                                    target="_blank"
+                                    :href="`https://youtu.be/${currentSong.video_id}?t=${currentSong.start}`"
+                                    ><v-icon left>{{ icons.mdiYoutube }}</v-icon>
+                                    {{ $t("views.settings.redirectModeLabel") }}
+                                </v-list-item>
+                                <v-list-item :to="`/edit/video/${currentSong.video_id}/music`"
+                                    ><v-icon left>{{ icons.mdiPencil }}</v-icon>
+                                    {{ $t("component.videoCard.edit") }}
+                                </v-list-item>
+                            </v-list>
+                        </v-menu>
+                    </div>
                 </div>
             </transition>
             <!-- </> -->
-            <div class="playlist-buttons align-self-center">
+            <div class="playlist-buttons align-self-center" v-if="$vuetify.breakpoint.smAndUp">
                 <v-btn icon large @click="closePlayer">
                     <v-icon>{{ icons.mdiClose }}</v-icon>
                 </v-btn>
@@ -128,6 +159,82 @@
         ></song-frame>
     </v-bottom-sheet>
 </template>
+
+<style lang="scss">
+.theme--light .music-player-bar {
+    background: rgba(237, 227, 241, 0.95);
+}
+.theme--dark .music-player-bar {
+    background: rgba(41, 43, 49, 0.99);
+}
+.music-player-bar {
+    position: relative;
+
+    iframe {
+        border-radius: 4px;
+    }
+    .song-player-container {
+        // border-radius: 5px;
+        width: 356px;
+        position: absolute;
+        padding: 2px;
+        bottom: 100%;
+        right: 0;
+    }
+}
+
+.single-line-clamp {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    white-space: initial;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+}
+
+.player-controls .v-btn::before {
+    background-color: transparent;
+}
+#songChannel {
+    text-decoration: none;
+}
+.queue-btn {
+    transition: background-color 2s ease;
+    background-color: transparent !important;
+    &.added-animation {
+        animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        background-color: #f06292 !important;
+    }
+}
+
+.music-more-btn {
+}
+
+@keyframes shake {
+    10%,
+    90% {
+        transform: translate3d(-1px, 0, 0);
+    }
+
+    20%,
+    80% {
+        transform: translate3d(2px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+        transform: translate3d(-4px, 0, 0);
+    }
+
+    40%,
+    60% {
+        transform: translate3d(4px, 0, 0);
+    }
+}
+</style>
+
 <script lang="ts">
 import { MUSIC_PLAYBACK_MODE, MUSIC_PLAYER_STATE } from "@/utils/consts";
 import VueYouTubeEmbed from "vue-youtube-embed";
@@ -183,7 +290,17 @@ export default {
             queueMenuOpen: false,
 
             titleTransition: "scroll-y-reverse-transition",
+
+            allowPlayOverride: 0, // set to timestamp user clicks on yt frame.
+            // used to check whether or not to allow a user action to override current
+            // playback state.
         };
+    },
+    mounted() {
+        window.addEventListener("blur", this.probableMouseClickInIFrame);
+    },
+    beforeDestroy() {
+        window.removeEventListener("blur", this.probableMouseClickInIFrame);
     },
     watch: {
         isOpen() {
@@ -192,7 +309,7 @@ export default {
             setTimeout(() => {
                 // console.log("fix scroll")
                 if (this.$refs.sheet) {
-                    console.log("fix scroll");
+                    // console.log("fix scroll");
                     this.$refs.sheet.showScroll();
                     // either set :retain-focus="false" above or do this:
                     this.$nextTick(() => this.$refs.sheet.unbind());
@@ -200,17 +317,17 @@ export default {
             }, 100);
         },
         playlist(nw) {
-            console.log("playlist: ", nw.length);
+            // console.log("playlist: ", nw.length);
             if (nw.length === 0) this.$store.commit("music/closeBar");
             if (this.isOpen === false && nw.length === 0) this.$store.commit("music/openBar");
         },
         currentSong(ns, os) {
-            if (os != null && this.progress > 80) {
-                console.log("track song");
+            if (os != null && this.progress > 80 && this.progress < 105) {
+                // console.log("track song");
 
                 backendApi.trackSongPlay(os.channel_id, os.video_id, os.name).catch((err) => console.error(err));
             }
-            console.log("change song");
+            // console.log("change song");
         },
         titleTransition(ns) {
             if (ns !== "scroll-y-reverse-transition") {
@@ -251,7 +368,17 @@ export default {
         },
         songIsPlaying(player) {
             this.player = player.target;
-            if (!this.isOpen || this.state === MUSIC_PLAYER_STATE.PAUSED) {
+            /**-----------------------
+             * *       INFO
+             *  if: the bar is NOT OPEN
+             *
+             *  or
+             *
+             *  The Music Player is supposed to be PAUSED
+             *  AND the play event is not triggered by the user.
+             *
+             *------------------------* */
+            if (!this.isOpen || (this.state === MUSIC_PLAYER_STATE.PAUSED && this.allowPlayOverride === 0)) {
                 this.player.pauseVideo();
                 return;
             }
@@ -291,7 +418,7 @@ export default {
             this.$store.commit("music/pause");
         },
         progressChange(progress) {
-            if (!this.currentSong) return;
+            if (!this.currentSong || !this.player) return;
 
             const { start, end } = this.currentSong;
             const totalLength = end - start;
@@ -307,75 +434,9 @@ export default {
             this.titleTransition = "scroll-y-transition";
             this.$store.commit("music/prevSong");
         },
+        probableMouseClickInIFrame() {
+            this.allowPlayOverride = Date.now();
+        },
     },
 };
 </script>
-
-<style lang="scss">
-.theme--light .music-player-bar {
-    background: rgba(237, 227, 241, 0.95);
-}
-.theme--dark .music-player-bar {
-    background: rgba(41, 43, 49, 0.99);
-}
-.music-player-bar {
-    position: relative;
-    /* border-top: 2px solid #007bff; */
-    /* backdrop-filter: blur(5px); */
-    /* background: linear-gradient(180deg, rgba(80,80,80,1) 0%, rgba(43,47,50,1) 100%);  */
-    /* box-shadow: 1px 0px 2px inset #007bff; */
-    iframe {
-        border-radius: 4px;
-    }
-    .song-player-container {
-        // border-radius: 5px;
-        width: 356px;
-        position: absolute;
-        padding: 2px;
-        bottom: 100%;
-        right: 0;
-    }
-}
-
-.single-line-clamp {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    white-space: initial;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    display: -webkit-box;
-}
-
-.player-controls .v-btn::before {
-    background-color: transparent;
-}
-#songChannel {
-    text-decoration: none;
-}
-.added-animation {
-    animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
-@keyframes shake {
-    10%,
-    90% {
-        transform: translate3d(-1px, 0, 0);
-    }
-
-    20%,
-    80% {
-        transform: translate3d(2px, 0, 0);
-    }
-
-    30%,
-    50%,
-    70% {
-        transform: translate3d(-4px, 0, 0);
-    }
-
-    40%,
-    60% {
-        transform: translate3d(4px, 0, 0);
-    }
-}
-</style>

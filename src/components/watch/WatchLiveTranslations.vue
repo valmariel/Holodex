@@ -1,5 +1,5 @@
 <template>
-    <v-card class="text-body-2 tl-overlay" tile flat>
+    <v-card class="text-body-2 tl-overlay" tile flat style="width: 100%">
         <v-overlay absolute :value="showOverlay || $socket.disconnected" opacity="0.8">
             <div v-if="isLoading">{{ $t("views.watch.chat.loading") }}</div>
             <div class="pa-3" v-else>{{ overlayMessage }}</div>
@@ -29,41 +29,81 @@
                     <v-card-title> {{ $t("views.watch.chat.TLSettingsTitle") }} </v-card-title>
 
                     <v-card-text>
-                        <v-switch
-                            v-model="liveTlStickBottom"
-                            :label="$t('views.watch.chat.StickBottomSettingLabel')"
-                            :messages="$t('views.watch.chat.StickBottomSettingsDesc')"
-                        ></v-switch>
                         <v-select
                             v-model="liveTlLang"
                             :items="TL_LANGS"
                             :hint="$t('views.settings.tlLanguageSelection')"
                             persistent-hint
                         />
+                        <v-switch
+                            v-model="liveTlShowVerified"
+                            :label="$t('views.watch.chat.showVerifiedMessages')"
+                            hide-details
+                        ></v-switch>
+                        <v-switch
+                            v-model="liveTlShowModerator"
+                            :label="$t('views.watch.chat.showModeratorMessages')"
+                        ></v-switch>
+                        <v-divider class="pb-6" />
+                        <v-combobox
+                            v-model="liveTlFontSize"
+                            :items="[10, 11, 12, 14, 18, 24, 30]"
+                            :label="$t('views.watch.chat.tlFontSize')"
+                            outlined
+                        >
+                            <template v-slot:append-outer> px </template>
+                        </v-combobox>
+                        <v-combobox
+                            v-model="liveTlWindowSize"
+                            :items="[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]"
+                            :label="$t('views.watch.chat.tlWindowSize')"
+                            outlined
+                            hide-details
+                        >
+                            <template v-slot:append-outer> % </template>
+                        </v-combobox>
+                        <v-switch
+                            v-model="liveTlStickBottom"
+                            :label="$t('views.watch.chat.StickBottomSettingLabel')"
+                            :messages="$t('views.watch.chat.StickBottomSettingsDesc')"
+                        ></v-switch>
                     </v-card-text>
                 </v-card>
             </v-dialog>
         </v-card-subtitle>
         <v-divider />
-        <v-card-text class="text-body-2 tl-body thin-scroll-bar d-flex flex-column-reverse pa-1 pa-lg-3">
-            <template v-for="(item, index) in tlHistory">
-                <div :key="index">
-                    <div
-                        v-if="index === 0 || index === tlHistory.length - 1 || item.name !== tlHistory[index - 1].name"
-                        class="text-caption"
-                        :color="item.isOwner ? 'primary' : ''"
-                    >
-                        <v-divider class="my-1" />
-                        {{ item.name }}:
+        <v-card-text
+            class="tl-body thin-scroll-bar d-flex flex-column pa-1 pa-lg-3"
+            ref="tlBody"
+            :style="{
+                'font-size': liveTlFontSize + 'px',
+            }"
+        >
+            <transition-group name="fade">
+                <template v-for="(item, index) in tlHistory">
+                    <div :key="index">
+                        <div
+                            v-if="
+                                index === 0 || index === tlHistory.length - 1 || item.name !== tlHistory[index - 1].name
+                            "
+                            class="tl-caption"
+                            :class="{
+                                'primary--text': item.isOwner,
+                                'secondary--text': item.isVerified || item.isModerator,
+                            }"
+                        >
+                            <v-divider class="my-1" />
+                            {{ item.name }}:
+                        </div>
+                        <div>
+                            <span class="tl-caption mr-1" v-if="item.timestamp">
+                                {{ utcToTimestamp(item.timestamp) }}
+                            </span>
+                            <span class="text--primary">{{ item.message }}</span>
+                        </div>
                     </div>
-                    <div>
-                        <span class="text-caption mr-1" v-if="item.timestamp">
-                            {{ utcToTimestamp(item.timestamp) }}
-                        </span>
-                        <span class="text--primary">{{ item.message }}</span>
-                    </div>
-                </div>
-            </template>
+                </template>
+            </transition-group>
         </v-card-text>
     </v-card>
 </template>
@@ -72,10 +112,21 @@
 import api, { API_BASE_URL } from "@/utils/backend-api";
 import { formatDuration, dayjs } from "@/utils/time";
 import { TL_LANGS } from "@/utils/consts";
-import { debounce } from "@/utils/functions";
+import { debounce, syncState } from "@/utils/functions";
 import VueSocketIOExt from "vue-socket.io-extended";
 import { Manager } from "socket.io-client";
 import Vue from "vue";
+
+const manager = new Manager(/* process.env.NODE_ENV === "development" ? "http://localhost:2434" : */ API_BASE_URL, {
+    reconnectionAttempts: 10,
+    transports: ["websocket"],
+    upgrade: false,
+    path: /* process.env.NODE_ENV !== "development" && */ "/api/socket.io/",
+    secure: true,
+    autoConnect: false,
+});
+
+Vue.use(VueSocketIOExt, manager.socket("/"));
 
 export default {
     name: "WatchLiveTranslations",
@@ -136,21 +187,7 @@ export default {
             }
         },
     },
-    created() {
-        const manager = new Manager(
-            /* process.env.NODE_ENV === "development" ? "http://localhost:2434" : */ API_BASE_URL,
-            {
-                reconnectionAttempts: 10,
-                transports: ["websocket"],
-                upgrade: false,
-                path: /* process.env.NODE_ENV !== "development" && */ "/api/socket.io/",
-                secure: true,
-                autoConnect: false,
-            },
-        );
-
-        Vue.use(VueSocketIOExt, manager.socket("/"));
-    },
+    created() {},
     mounted() {
         this.tlJoin();
     },
@@ -167,34 +204,45 @@ export default {
         lang() {
             return this.$store.state.settings.lang;
         },
-        liveTlStickBottom: {
-            get() {
-                return this.$store.state.settings.liveTLStickBottom;
-            },
-            set(val) {
-                this.$store.commit("settings/setLiveTlStickBottom", val);
-            },
-        },
-        liveTlLang: {
-            get() {
-                return this.$store.state.settings.liveTlLang;
-            },
-            set(val) {
-                this.$store.commit("settings/setLiveTlLang", val);
-            },
-        },
+        ...syncState("settings", [
+            "liveTlStickBottom",
+            "liveTlLang",
+            "liveTlFontSize",
+            "liveTlShowVerified",
+            "liveTlShowModerator",
+            "liveTlWindowSize",
+        ]),
         connected() {
             return this.$socket.connected;
         },
     },
     methods: {
+        // eslint-disable-next-line func-names
+        scrollBottom: debounce(function (force = false) {
+            if (!this.$refs.tlBody) return;
+            if (
+                force ||
+                this.$refs.tlBody.scrollHeight - this.$refs.tlBody.clientHeight - this.$refs.tlBody.scrollTop < 100
+            )
+                this.$refs.tlBody.scrollTo({ top: this.$refs.tlBody.scrollHeight, behavior: "smooth" });
+        }, 100),
         registerListener() {
             const vm = this as any;
             this.$socket.client.on(`${vm.video.id}/${vm.liveTlLang}`, (msg) => {
                 // if no type, process as regular message
                 if (!msg.type) {
-                    vm.tlHistory.unshift(msg);
+                    // ignore moderator and verified messages if disabled
+                    if ((msg.isModerator && !this.liveTlShowModerator) || (msg.isVerified && !this.liveTlShowVerified))
+                        return;
+
+                    // Append title to author name
+                    if (msg.isModerator) msg.name = `[Mod] ${msg.name}`;
+                    if (msg.isVerified) msg.name = `[Verified] ${msg.name}`;
+                    if (msg.isOwner) msg.name = `[Owner] ${msg.name}`;
+
+                    vm.tlHistory.push(msg);
                     vm.$emit("historyLength", vm.tlHistory.length);
+                    this.scrollBottom();
                     return;
                 }
                 switch (msg.type) {
@@ -217,7 +265,7 @@ export default {
             });
         },
         // eslint-disable-next-line func-names
-        tlJoin: debounce(function () {
+        tlJoin() {
             // Disallow users from joining a chat room that doesn't exist yet
             // Backend will create a chatroom when it's 15 minutes before a stream
             if (
@@ -238,12 +286,13 @@ export default {
 
             // Grab chat history
             api.chatHistory(this.video.id, this.liveTlLang).then(({ data }) => {
-                this.tlHistory = data.reverse();
+                this.tlHistory = data;
+                this.scrollBottom(true);
             });
 
             // Try to join chat room with specified language
             this.$socket.client.emit("subscribe", { video_id: this.video.id, lang: this.liveTlLang });
-        }, 300),
+        },
         tlLeave() {
             const vm = this as any;
             // only disconnect and derement socket if it succeeded
@@ -252,6 +301,8 @@ export default {
                 vm.$socket.client.emit("unsubscribe", { video_id: vm.video.id, lang: vm.liveTlLang });
                 vm.$socket.client.off(`${vm.video.id}/${vm.liveTlLang}`);
                 vm.$store.dispatch("checkActiveSockets");
+                // Reset for immediate reconnects
+                vm.success = false;
             }
         },
         utcToTimestamp(utc) {
@@ -270,10 +321,25 @@ export default {
     overflow-y: auto;
     overscroll-behavior: contain;
     height: calc(100% - 32px);
+    line-height: 1.25em;
+    letter-spacing: 0.0178571429em !important;
 }
 
 .tl-overlay {
     border: 1px solid rgba(65, 65, 65, 0.2) !important;
     box-sizing: border-box;
+}
+
+.tl-body .tl-caption {
+    letter-spacing: 0.0333333333em !important;
+    font-size: 0.85em;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: all 0.4s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+    opacity: 0;
 }
 </style>

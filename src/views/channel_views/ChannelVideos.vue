@@ -1,45 +1,47 @@
 <template>
-    <div style="height: 100%">
-        <VideoCardList
-            :videos="videos"
-            :includeChannel="hasChannelInfo"
-            :cols="{
-                xs: 1,
-                sm: 3,
-                md: 4,
-                lg: 5,
-                xl: 6,
-            }"
-            :dense="true"
-            paginateLoad
-            :identifier="identifier"
-            :paginatePages="pages"
-            @load="loadNext"
-        />
-        <!-- infiniteLoad
-            @infinite="loadNext"
-            :infiniteId="infiniteId" -->
-    </div>
+    <generic-list-loader
+        paginate
+        :perPage="this.pageLength"
+        :loadFn="getLoadFn()"
+        v-slot="{ data, isLoading }"
+        :key="id + type"
+    >
+        <VideoCardList :videos="data" :includeChannel="hasChannelInfo" :cols="cols" dense v-show="!isLoading" />
+        <!-- Render skeleton items when data hasn't loaded yet -->
+        <SkeletonCardList :cols="cols" dense v-if="isLoading" />
+    </generic-list-loader>
 </template>
 
 <script lang="ts">
 import VideoCardList from "@/components/video/VideoCardList.vue";
 // import api from "@/utils/backend-api";
 import { mapState } from "vuex";
+import backendApi from "@/utils/backend-api";
+import GenericListLoader from "@/components/video/GenericListLoader.vue";
+import SkeletonCardList from "@/components/video/SkeletonCardList.vue";
 
 export default {
     name: "ChannelVideos",
     components: {
         VideoCardList,
+        GenericListLoader,
+        SkeletonCardList,
     },
     data() {
         return {
             identifier: +new Date(),
-            pageLength: 25,
+            pageLength: 24,
+            cols: Object.freeze({
+                xs: 1,
+                sm: 3,
+                md: 4,
+                lg: 5,
+                xl: 6,
+            }),
         };
     },
     computed: {
-        ...mapState("channel", ["videos", "total"]),
+        ...mapState("channel", ["id", "channel"]),
         hasChannelInfo() {
             // get uploader name for videos not uploaded by current channel
             return this.$route.name === "channel_clips" || this.$route.name === "channel_collabs";
@@ -54,44 +56,29 @@ export default {
                     return "videos";
             }
         },
-        pages() {
-            return Math.ceil(this.total / this.pageLength);
-        },
     },
     watch: {
         // eslint-disable-next-line func-names
         "$route.name": function () {
-            this.resetVideos();
+            this.identifier = +new Date();
         },
     },
     methods: {
-        resetVideos() {
-            this.identifier = +new Date();
-            this.$store.commit("channel/resetVideos");
-        },
-        loadNext($state) {
-            // const lastLength = this.videos.length;
-            this.$store.commit("channel/resetVideos");
-            this.$store
-                .dispatch("channel/fetchNextVideos", {
+        getLoadFn() {
+            // eslint-disable-next-line func-names
+            return async (offset, limit) => {
+                const res = await backendApi.channelVideos(this.id, {
                     type: this.type,
-                    params: {
-                        limit: this.pageLength,
-                        offset: this.pageLength * ($state.page - 1),
+                    query: {
+                        lang: this.$store.state.settings.clipLangs.join(","),
+                        include: "clips,live_info",
+                        limit,
+                        offset,
                         paginated: true,
                     },
-                })
-                .then(() => {
-                    if ($state.page <= this.pages) {
-                        $state.loaded();
-                    } else {
-                        $state.completed();
-                    }
-                })
-                .catch((e) => {
-                    console.error(e);
-                    $state.error();
                 });
+                return res.data;
+            };
         },
     },
 };

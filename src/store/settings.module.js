@@ -1,32 +1,42 @@
 /* eslint-disable no-shadow */
 import Vue from "vue";
-import { langs } from "@/plugins/vuetify";
-import { TL_LANGS } from "@/utils/consts";
+import { createSimpleMutation, getUILang, getLang } from "@/utils/functions";
 
-const userLanguage = (navigator.language || navigator.userLanguage || "en").split("-")[0].toLowerCase();
-
-const validLangs = new Set(langs.map((x) => x.val));
-const validTlLangs = new Set(TL_LANGS.map((x) => x.value));
+const userLanguage = navigator.language || navigator.userLanguage || "en";
 
 const englishNamePrefs = new Set(["en", "es", "fr", "id", "pt", "de", "ru", "it"]);
+const lang = getLang(userLanguage);
 
 const initialState = {
-    lang: validLangs.has(userLanguage) ? userLanguage : "en",
-    clipLangs: [validTlLangs.has(userLanguage) ? userLanguage : "en"],
+    // Language
+    lang: getUILang(userLanguage), // UI lang
+    clipLangs: [lang],
+
+    // Site
     darkMode: true,
     defaultOpenFavorites: false,
+
+    // Content
     redirectMode: false,
     autoplayVideo: true,
-    canUseWebP: true,
-    testedWebP: false,
-    nameProperty: englishNamePrefs.has(userLanguage) ? "english_name" : "name",
-    hideThumbnail: false,
     scrollMode: true,
+    hideThumbnail: false,
+    nameProperty: englishNamePrefs.has(lang) ? "english_name" : "name",
+    hideCollabStreams: false,
 
+    // Live TL Window Settings
     liveTlStickBottom: false,
-    liveTlLang: validTlLangs.has(userLanguage) ? userLanguage : "en",
+    liveTlLang: lang,
+    liveTlFontSize: 14,
+    liveTlShowVerified: true, // show verified messages
+    liveTlShowModerator: true, // show moderator messages
+    liveTlWindowSize: 0, // Default size, otherwise percentage height
 
     blockedChannels: [],
+
+    // Deprecated
+    canUseWebP: true,
+    testedWebP: false,
 };
 
 export const state = { ...initialState };
@@ -73,15 +83,16 @@ const mutations = {
     setScrollMode(state, val) {
         state.scrollMode = val;
     },
-    setLiveTlStickBottom(state, val) {
-        state.liveTlStickBottom = val;
-    },
-    setLiveTlLang(state, val) {
-        state.liveTlLang = val;
-    },
-    setDefaultOpenFavorites(state, val) {
-        state.defaultOpenFavorites = val;
-    },
+    ...createSimpleMutation([
+        "defaultOpenFavorites",
+        "liveTlStickBottom",
+        "liveTlLang",
+        "liveTlFontSize",
+        "liveTlShowVerified",
+        "liveTlShowModerator",
+        "liveTlWindowSize",
+        "hideCollabStreams",
+    ]),
     resetState(state) {
         Object.assign(state, initialState);
     },

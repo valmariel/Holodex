@@ -1,10 +1,10 @@
-const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.";
 /**
  * Encodes a layout array and contents to a compact URI
- * @param {{layout, contents}} layout and layout contents
+ * @param {{layout, contents, includeVideo?}} layout and layout contents
  * @returns {string} encoded string
  */
-export function encodeLayout({ layout, contents }) {
+export function encodeLayout({ layout, contents, includeVideo = false }) {
     const l = [];
     try {
         layout.forEach((item) => {
@@ -18,17 +18,21 @@ export function encodeLayout({ layout, contents }) {
                 }
             });
 
-            if (!invalid) {
-                if (contents[item.i]) {
-                    const { type, content } = contents[item.i];
-                    if (type === "chat") {
-                        encodedBlock += "chat";
-                    } else if (type === "video") {
+            if (invalid) return;
+
+            if (contents[item.i]) {
+                const { type, content, currentTab } = contents[item.i];
+                if (type === "chat") {
+                    encodedBlock += `chat${currentTab || 0}`;
+                } else if (type === "video" && includeVideo) {
+                    if (content.cellVideoType === "twitch") {
+                        encodedBlock += `twitch${content.id}`;
+                    } else {
                         encodedBlock += content.id + content.channel.name.split(" ")[0].replace(",", "");
                     }
                 }
-                l.push(encodedBlock);
             }
+            l.push(encodedBlock);
         });
         return l.join(",");
     } catch (e) {
@@ -48,6 +52,8 @@ export function decodeLayout(encodedStr) {
     encodedStr.split(",").forEach((str, index) => {
         const xywh = str.substring(0, 4);
         const idOrChat = str.substring(4, 15);
+        const isChat = idOrChat.substring(0, 4) === "chat";
+        const isTwitch = idOrChat.substring(0, 6) === "twitch";
         const channelName = str.substring(15);
 
         const keys = ["x", "y", "w", "h"];
@@ -60,13 +66,25 @@ export function decodeLayout(encodedStr) {
 
         parsedLayout.push(layoutItem);
 
-        if (idOrChat === "chat") {
+        if (isChat) {
+            const currentTab = idOrChat.length === 5 ? Number(idOrChat[4]) : 0;
             parsedContent[index] = {
                 type: "chat",
+                currentTab,
             };
-        }
-
-        if (idOrChat.length === 11) {
+        } else if (isTwitch) {
+            const twitchChannel = str.substring(10);
+            parsedContent[index] = {
+                type: "video",
+                content: {
+                    id: twitchChannel,
+                    cellVideoType: "twitch",
+                    channel: {
+                        name: twitchChannel,
+                    },
+                },
+            };
+        } else if (idOrChat.length === 11) {
             parsedContent[index] = {
                 type: "video",
                 content: {
@@ -83,18 +101,33 @@ export function decodeLayout(encodedStr) {
         content: parsedContent,
     };
 }
+
+/**
+ * Count the number of empty cells
+ * @param {{layout, content}} layout and layout contents
+ * @returns {number} count of empty cells
+ */
+export function getEmptyCells({ layout, content }) {
+    return layout.length - Object.values(content).filter((o) => o.type === "chat").length;
+}
+
 export const desktopPresets = Object.freeze([
     { layout: "AATY,TAFYchat", name: "Side Chat 1", emptyCells: 1 },
-    { layout: "AARM,AMRM,RAHYchat", name: "Side Chat 2", emptyCells: 2 },
+    { layout: "AARM,AMRM,RAHYchat", name: "Side Chat 2" },
+    { layout: "AAOM,AMOM,OAFYchat,TAFYchat", name: "2 Video, 2 Chat", emptyCells: 2 },
     { layout: "AAMY,MAMM,MMMM", name: "p1s2", emptyCells: 3 },
+    { layout: "AAMM,AMMM,MAMM,MMGMchat,SMGMchat", name: "3 Video, 2 Chat" },
     { layout: "AAMM,AMMM,MAMM,MMMM", name: "2 x 2", emptyCells: 4 },
+    { layout: "SAGYchat,AAJM,AMJM,JAJM,JMJM", name: "2 x 2 Chat" },
     { layout: "AAIM,AMIM,IAIM,IMIM,QAIM,QMIM", name: "2 x 3", emptyCells: 6 },
     { layout: "AAII,AIII,AQII,IAII,IIII,IQII,QAII,QIII,QQII", name: "3 x 3", emptyCells: 9 },
-    { layout: "SAGYchat,AAJM,AMJM,JAJM,JMJM", name: "Side Chat 4" },
+    {
+        layout: "AAGI,GAGI,MAGI,AIGI,GIGI,MIGI,AQGI,GQGI,MQGI,SAGYchat",
+        name: "3 x 3 Chat",
+    },
+
     { layout: "AAQQ,AQII,IQII,QAII,QIII,QQII", name: "p1s5", emptyCells: 6 },
-    { layout: "AAOM,AMOM,OAFYchat,TAFYchat", name: "2 Video, 2 Chat" },
-    { layout: "AAMM,AMMM,MAMM,MMGMchat,SMGMchat", name: "3 Video, 2 Chat" },
-    { layout: "AAML,MAML,ALGH,GLGH,MLGH,SLGH,ASGG,GSGG,MSGG,SSGG", name: "Among Us 1" },
+    { layout: "AAML,MAML,ALGH,GLGH,MLGH,SLGH,ASGG,GSGG,MSGG,SSGG", name: "Among Us 1", emptyCells: 10 },
     { layout: "AAKL,KAKL,UAEYchat,ALFH,FLFH,KLFH,PLFH,ASFG,FSFG,KSFG,PSFG", name: "Among Us 2" },
     { layout: "AASR,SAGYchat,ARGH,GRGH,MRGH", name: "Sports Fes 1" },
     {
@@ -105,9 +138,11 @@ export const desktopPresets = Object.freeze([
 ]);
 
 export const mobilePresets = Object.freeze([
-    { layout: "AAYI,AIYI,AQYI", name: "Mobile 1" },
-    { layout: "AOYKchat,AAYH,AHYH", name: "Mobile 2" },
-    { layout: "MAMY,AAMM,AMMM", name: "Mobile 3", landscape: true },
+    { layout: "AAYI,AIYQchat0", name: "Mobile 1", emptyCells: 1 },
+    { layout: "AOYKchat,AAYH,AHYH", name: "Mobile 2", emptyCells: 2 },
+    { layout: "AAYI,AIYI,AQYI", name: "Mobile 3", emptyCells: 3 },
+    { layout: "MAMY,AAMM,AMMM", name: "Mobile 3L", landscape: true },
+    { layout: "AAMM,AMMM,MAMM,MMMM", name: "Mobile 4", emptyCells: 4, landscape: true },
 ]);
 
 // Auxilary function for making sure the biggest and left most cells are first

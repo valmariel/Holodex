@@ -56,7 +56,7 @@ module.exports = {
                     },
                 },
                 {
-                    urlPattern: new RegExp("https://yt3.ggpht.com/(a/|ytc/)(.*)=s40-c-k-c0x00ffffff-no-rj-mo(.*)"),
+                    urlPattern: new RegExp("https://yt3.ggpht.com/(a/|ytc/)(.*)=s(40|88)-c-k-c0x00ffffff-no-rj-mo(.*)"),
                     handler: "CacheFirst",
                     options: {
                         cacheName: "channel-photo",
@@ -71,7 +71,7 @@ module.exports = {
                 },
                 {
                     urlPattern: new RegExp("https://www.youtube.com/player_api"),
-                    handler: "cacheFirst",
+                    handler: "CacheFirst",
                     options: {
                         cacheName: "youtube-player",
                         expiration: {

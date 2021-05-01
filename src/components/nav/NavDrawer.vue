@@ -26,6 +26,17 @@
                     <v-list-item-content>
                         <v-list-item-title v-html="page.name"> </v-list-item-title>
                     </v-list-item-content>
+                    <!-- Quick Settings Popup -->
+                    <v-list-item-icon v-if="page.path === '/settings'">
+                        <v-menu right nudge-right max-height="80vh" :close-on-content-click="false">
+                            <template v-slot:activator="{ on, attrs }">
+                                <v-icon v-on="on" v-bind="attrs" @click.stop.prevent>{{ mdiTuneVariant }}</v-icon>
+                            </template>
+                            <v-card rounded="lg" class="py-n2 scrollable">
+                                <settings slim />
+                            </v-card>
+                        </v-menu>
+                    </v-list-item-icon>
                 </v-list-item>
                 <v-divider v-if="page.divider" :key="`${page.path}-divider`" />
             </template>
@@ -33,7 +44,7 @@
         </v-list>
         <v-divider />
         <v-list dense>
-            <v-subheader class="text-overline">
+            <v-subheader class="pl-5 text-overline">
                 {{ this.$t("component.mainNav.favorites") }}
             </v-subheader>
             <template v-for="channel in collapsedFavorites">
@@ -46,9 +57,14 @@
                         <ChannelImg :channel="channel" :size="30" />
                     </v-list-item-avatar>
                     <ChannelInfo :channel="channel" noSubscriberCount noGroup />
-                    <v-list-item-action-text v-if="isLive(channel) || getChannelLiveAtTime(channel)">
+                    <v-list-item-action-text
+                        v-if="isLive(channel) || getChannelLiveAtTime(channel)"
+                        :key="'liveclock' + channel.id + tick"
+                    >
                         <span class="ch-live" v-if="isLive(channel)">●</span>
-                        <span class="ch-upcoming" v-else>{{ formatDurationLive(getChannelLiveAtTime(channel)) }}</span>
+                        <span class="ch-upcoming" v-else>
+                            {{ formatDurationUpcoming(getChannelLiveAtTime(channel)) }}
+                        </span>
                     </v-list-item-action-text>
                 </v-list-item>
             </template>
@@ -58,7 +74,7 @@
                 </v-list-item-action>
                 <v-list-item-content>
                     <v-list-item-title>
-                        {{ favoritesExpanded ? "Close" : "Show All" }}
+                        {{ favoritesExpanded ? $t("views.favorites.close") : $t("views.favorites.showall") }}
                     </v-list-item-title>
                 </v-list-item-content>
             </v-list-item>
@@ -84,6 +100,7 @@ import ChannelImg from "@/components/channel/ChannelImg.vue";
 import ChannelInfo from "@/components/channel/ChannelInfo.vue";
 import { langs } from "@/plugins/vuetify";
 import { dayjs } from "@/utils/time";
+import { mdiTuneVariant } from "@mdi/js";
 
 function getChannelLiveAtTime(ch) {
     if (ch.videos && ch.videos[0]) {
@@ -97,6 +114,7 @@ export default {
     components: {
         ChannelImg,
         ChannelInfo,
+        Settings: () => import("@/views/Settings.vue"),
     },
     props: {
         pages: {
@@ -115,7 +133,19 @@ export default {
     data() {
         return {
             favoritesExpanded: false,
+            tick: Date.now(),
+            ticker: null,
+
+            mdiTuneVariant,
         };
+    },
+    mounted() {
+        this.ticker = setInterval(() => {
+            this.tick = Date.now();
+        }, 60000);
+    },
+    beforeDestroy() {
+        if (this.ticker) clearInterval(this.ticker);
     },
     computed: {
         // ...mapState("favorites", ["favorites", "live"]),
@@ -174,11 +204,14 @@ export default {
                 ? this.$router.go(0)
                 : this.$router.push({ path: page.path });
         },
-        formatDurationLive(ts) {
+        formatDurationUpcoming(ts) {
             const secs = dayjs(ts).diff(dayjs()) / 1000;
-            const h = Math.floor(secs / (60 * 60));
-            const m = Math.floor((secs % (60 * 60)) / 60);
-            return h ? `${h}h` : `${m}m`;
+            if (secs > 0) {
+                const h = Math.floor(secs / (60 * 60));
+                const m = Math.floor((secs % (60 * 60)) / 60);
+                return h ? `${h}h` : `${m}m`;
+            }
+            return "●";
         },
         isLive(channel) {
             return channel.videos && channel.videos[0] && channel.videos[0].status === "live";

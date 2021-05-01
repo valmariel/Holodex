@@ -28,7 +28,7 @@
         </v-row>
         <v-row dense>
             <v-col cols="8" sm="9" md="10" lg="10">
-                <song-search :value="current.song" :id="current.itunesid" @input="processSearch"></song-search>
+                <song-search :value="current.song" :id="current.itunesid" @input="processSearch" ref="search" />
             </v-col>
             <v-col cols="4" sm="3" md="2" lg="2">
                 <v-text-field
@@ -66,6 +66,7 @@
                             @click="
                                 current.start -= 2;
                                 current.end -= 2;
+                                currentStartTime = secondsToHuman(current.start);
                             "
                         >
                             <v-icon small>{{ icons.mdiChevronLeft }}</v-icon> 2s
@@ -111,6 +112,7 @@
                             @click="
                                 current.start += 2;
                                 current.end += 2;
+                                currentStartTime = secondsToHuman(current.start);
                             "
                         >
                             2s<v-icon small>{{ icons.mdiChevronRight }}</v-icon>
@@ -245,6 +247,8 @@
 
 <script lang="ts">
 import { mdiEarHearing, mdiRestore, mdiTimerOutline, mdiDebugStepOver } from "@mdi/js";
+import Vue from "vue";
+
 import backendApi from "@/utils/backend-api";
 import { secondsToHuman } from "@/utils/time";
 import SongSearch from "./SongSearch.vue";
@@ -393,6 +397,10 @@ export default {
         },
     },
     methods: {
+        setStartTime(seconds) {
+            const self = this as any;
+            self.currentStartTime = secondsToHuman(seconds);
+        },
         processSearch(item) {
             console.log(item);
             const self = this as any;
@@ -421,7 +429,8 @@ export default {
             const self = this as any;
             await self.saveCurrentSong();
             // this.songList.push(this.current);
-            self.current = getEmptySong(self.video);
+            Vue.set(self, "current", getEmptySong(self.video));
+            self.$refs.search.query = null;
             await self.refreshSongList();
         },
         async refreshSongList() {

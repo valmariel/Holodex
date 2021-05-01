@@ -1,18 +1,20 @@
 <template>
     <v-card>
-        <v-card-title class="text-body-1">Comments</v-card-title>
+        <v-card-title class="text-body-1">{{ $t("component.watch.Comments.title") }}</v-card-title>
         <v-card-text>
-            <template v-for="b in buckets">
-                <v-btn
-                    class="mr-2 mb-2"
-                    :key="b.time"
-                    label
-                    @click="currentFilter = b.time"
-                    :color="currentFilter === b.time ? 'primary darken-1' : ''"
-                    small
-                >
-                    {{ b.display }} ({{ b.count }})
-                </v-btn>
+            <template v-if="!hideBuckets">
+                <template v-for="b in buckets">
+                    <v-btn
+                        class="mr-2 mb-2"
+                        :key="b.time"
+                        label
+                        @click="currentFilter = b.time"
+                        :color="currentFilter === b.time ? 'primary darken-1' : ''"
+                        small
+                    >
+                        {{ b.display }} ({{ b.count }})
+                    </v-btn>
+                </template>
             </template>
             <v-divider />
             <v-list dense class="pa-0 transparent caption" v-if="comments" @click.native="handleClick">
@@ -58,12 +60,17 @@ export default {
             required: false,
             default: 3,
         },
+        hideBuckets: {
+            type: Boolean,
+            default: false,
+        },
     },
     methods: {
         formatDuration,
         handleClick(e) {
             if (e.target.matches(".comment-chip")) {
-                this.$emit("timeJump", e.target.getAttribute("data-time"));
+                this.$emit("timeJump", e.target.getAttribute("data-time"), true, true);
+                // timeJump, timestamp, playNow = true, updateStartTime = true
                 e.preventDefault();
             }
         },
@@ -79,7 +86,7 @@ export default {
         },
         filteredComments() {
             if (this.currentFilter < 0) {
-                return this.comments.sort((a, b) => b.times.length - a.times.length);
+                return this.groupedComments.sort((a, b) => b.times.length - a.times.length);
             }
             return this.comments
                 .filter((c) => c.times.find((t) => Math.abs(this.currentFilter - t) <= 10))
@@ -115,7 +122,7 @@ export default {
             buckets.push({
                 time: -1,
                 count: this.comments.length,
-                display: "All",
+                display: `${this.$t("component.watch.Comments.all")}`,
             });
 
             let currentBucket = 0;

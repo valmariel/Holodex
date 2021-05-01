@@ -1,21 +1,19 @@
 <template>
     <div style="width: 100%" :class="{ 'mobile-helpers': $store.state.isMobile }" ref="fullscreen-content">
         <!-- Floating tool bar -->
-        <!-- <transition name="slide-y-transition" mode="out-in"> -->
-        <v-toolbar class="mv-toolbar" style="right: 0" v-show="!collapseToolbar">
+        <v-toolbar class="mv-toolbar" style="right: 0" v-show="!collapseToolbar" height="64">
             <v-app-bar-nav-icon @click="toggleMainNav"></v-app-bar-nav-icon>
             <!-- Toolbar Live Video Selector -->
             <div
                 class="justify-start d-flex mv-toolbar-btn align-center thin-scroll-bar"
                 style="overflow-x: auto; overflow-y: hidden"
-                v-if="!$vuetify.breakpoint.xs"
             >
-                <VideoSelector horizontal @videoClicked="handleToolbarClick" />
-            </div>
-            <!-- Single Button video selector for xs displays -->
-            <div v-else>
-                <v-btn @click="handleToolbarShowSelector" icon>
-                    <v-icon size="30" style="border-radius: 0">{{ mdiCardPlus }}</v-icon>
+                <VideoSelector v-if="!collapseButtons" horizontal @videoClicked="handleToolbarClick" />
+                <!-- Single Button video selector for xs displays -->
+                <v-btn @click="handleToolbarShowSelector" icon large>
+                    <v-icon style="border-radius: 0 position: relative; margin-right: 3px; cursor: pointer" large>
+                        {{ mdiCardPlus }}
+                    </v-icon>
                 </v-btn>
             </div>
             <!-- Right side buttons -->
@@ -24,18 +22,46 @@
                 :class="{ 'no-btn-text': $store.state.isMobile || true }"
             >
                 <!-- <v-switch v-model="autoLayout" hide-details></v-switch> -->
-                <v-btn @click="addItem" color="green" icon>
-                    <v-icon>{{ mdiViewGridPlus }}</v-icon>
-                    <span class="collapsible-text">{{ $t("views.multiview.addframe") }}</span>
-                </v-btn>
-                <v-btn @click="clearAllItems" color="red" icon>
-                    <v-icon>{{ icons.mdiRefresh }}</v-icon>
-                    <span class="collapsible-text">{{ $t("component.music.clearPlaylist") }}</span>
-                </v-btn>
-                <v-btn color="primary" @click="showPresetSelector = true" icon>
-                    <v-icon>{{ icons.mdiGridLarge }}</v-icon>
-                    <span class="collapsible-text">{{ $t("views.multiview.presets") }}</span>
-                </v-btn>
+                <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn @click="addItem" color="green" icon v-bind="attrs" v-on="on">
+                            <v-icon>{{ mdiViewGridPlus }}</v-icon>
+                        </v-btn>
+                    </template>
+                    <span>{{ $t("views.multiview.addframe") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn @click="clearAllItems" color="red" icon v-bind="attrs" v-on="on">
+                            <v-icon>{{ icons.mdiRefresh }}</v-icon>
+                        </v-btn>
+                    </template>
+                    <span>{{ $t("component.music.clearPlaylist") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn color="primary" @click="showPresetSelector = true" icon v-bind="attrs" v-on="on">
+                            <v-icon>{{ icons.mdiGridLarge }}</v-icon>
+                        </v-btn>
+                    </template>
+                    <span>{{ $t("views.multiview.presets") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn @click="setMuteAll(true)" icon v-bind="attrs" v-on="on" v-show="!collapseButtons">
+                            <v-icon>{{ icons.mdiVolumeMute }}</v-icon>
+                        </v-btn>
+                    </template>
+                    <span>{{ $t("views.multiview.muteAll") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn @click="setMuteAll(false)" icon v-bind="attrs" v-on="on" v-show="!collapseButtons">
+                            <v-icon>{{ icons.mdiVolumeHigh }}</v-icon>
+                        </v-btn>
+                    </template>
+                    <span>{{ $t("views.multiview.unmuteAll") }}</span>
+                </v-tooltip>
                 <v-menu
                     :open-on-click="true"
                     bottom
@@ -54,7 +80,7 @@
                     </template>
 
                     <v-card rounded="lg">
-                        <v-card-text>
+                        <v-card-text class="d-flex">
                             <v-text-field
                                 readonly
                                 solo-inverted
@@ -64,19 +90,63 @@
                                 :value="exportURL"
                                 :append-icon="mdiClipboardPlusOutline"
                                 @click:append.stop="startCopyToClipboard(exportURL)"
-                                style="ma-1"
                             ></v-text-field>
+                            <v-btn icon @click="showPresetEditor = true">
+                                <v-icon>{{ mdiContentSave }}</v-icon>
+                            </v-btn>
                         </v-card-text>
                     </v-card>
                 </v-menu>
+
                 <v-btn @click="toggleFullScreen" icon>
                     <v-icon>{{ icons.mdiFullscreen }}</v-icon>
                 </v-btn>
+                <v-menu offset-y>
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn v-bind="attrs" v-on="on" icon v-show="collapseButtons">
+                            <v-icon>{{ icons.mdiDotsVertical }}</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-item @click="setMuteAll(false)" block class="mb-2">
+                            <v-icon left>{{ icons.mdiVolumeHigh }}</v-icon>
+                            <span>{{ $t("views.multiview.unmuteAll") }}</span>
+                        </v-list-item>
+                        <v-list-item @click="setMuteAll(true)" block>
+                            <v-icon color="red" left>{{ icons.mdiVolumeMute }}</v-icon>
+                            <span>{{ $t("views.multiview.muteAll") }}</span>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
                 <v-btn icon @click="collapseToolbar = true">
                     <v-icon>{{ icons.mdiChevronUp }}</v-icon>
                 </v-btn>
             </div>
         </v-toolbar>
+
+        <!-- Multiview Cell Area Background -->
+        <div
+            class="mv-background"
+            :style="{
+                'background-size': `${columnWidth}px ${rowHeight}px`,
+                height: `${rowHeight * 24}px`,
+            }"
+        >
+            <template v-if="layout.length === 0">
+                <div style="max-width: 50%; display: inline-block">
+                    <div style="display: inline-block; margin-right: 20px; margin-left: 10px">
+                        <div style="height: 10vh; border: 1px solid gray; width: 1px; margin-left: 50%" />
+                        {{ $t("views.multiview.autoLayoutTip") }}
+                    </div>
+                </div>
+                <div style="max-width: 50%; display: inline-block; float: right">
+                    <div style="display: inline-block; margin-right: 10px">
+                        <div style="height: 10vh; border: 1px solid gray; width: 1px; margin-left: 50%" />
+                        {{ $t("views.multiview.createLayoutTip") }}
+                    </div>
+                </div>
+            </template>
+        </div>
         <!-- Floating button to open toolbar when collapsed -->
         <v-btn
             v-if="collapseToolbar"
@@ -92,9 +162,9 @@
         <!-- Grid Layout -->
         <!-- rowHeight = 100vh/colNum, makes layout consistent across different heights -->
         <grid-layout
-            :layout.sync="layout"
+            :layout="layout"
             :col-num="24"
-            :row-height="($vuetify.breakpoint.height - 26.0 - (collapseToolbar ? 0 : 64)) / 24.0"
+            :row-height="rowHeight - 26.0 / 24.0"
             :col-width="30"
             is-draggable
             is-resizable
@@ -111,16 +181,16 @@
                 :w="item.w"
                 :h="item.h"
                 :i="item.i"
-                :is-draggable="item.isDraggable"
-                :is-resizable="item.isResizable"
+                :isDraggable="item.isDraggable !== false"
+                :isResizable="item.isResizable !== false"
                 :key="'mvgrid' + item.i"
             >
-                <cell :item="item" @showSelector="(id) => (showSelectorForId = id)"> </cell>
+                <cell :item="item" @showSelector="(id) => (showSelectorForId = id)" @delete="handleDelete"> </cell>
             </grid-item>
         </grid-layout>
 
         <!-- Video Selector -->
-        <v-dialog v-model="showVideoSelector" width="1000">
+        <v-dialog v-model="showVideoSelector" min-width="75vw">
             <VideoSelector @videoClicked="handleVideoClicked" />
         </v-dialog>
 
@@ -129,12 +199,22 @@
             <PresetSelector @selected="handlePresetClicked" />
         </v-dialog>
 
+        <!-- Preset Editor -->
+        <v-dialog v-model="showPresetEditor" width="500">
+            <PresetEditor
+                v-if="showPresetEditor"
+                :layout="layout"
+                :content="layoutContent"
+                @close="showPresetEditor = false"
+            />
+        </v-dialog>
+
         <!-- Confirmation for deleting layout -->
         <v-dialog v-model="overwriteDialog" width="400">
             <v-card>
                 <v-card-title> {{ $t("views.multiview.confirmOverwrite") }} </v-card-title>
                 <v-card-text class="d-flex flex-column justify-center align-center">
-                    <LayoutPreview :layout="layoutPreview" />
+                    <LayoutPreview :layout="layoutPreview.layout" :content="layoutPreview.content" />
                     <v-checkbox
                         v-model="overwriteMerge"
                         :label="`Fill empty cells with current videos`"
@@ -168,9 +248,11 @@ import {
     mdiClipboardPlusOutline,
     mdiDelete,
     mdiCardPlus,
+    mdiContentSave,
 } from "@mdi/js";
 import copyToClipboard from "@/mixins/copyToClipboard";
-import { encodeLayout, decodeLayout, desktopPresets } from "@/utils/mv-layout";
+import { encodeLayout, decodeLayout, desktopPresets, mobilePresets } from "@/utils/mv-layout";
+import PresetEditor from "@/components/multiview/PresetEditor.vue";
 import PresetSelector from "@/components/multiview/PresetSelector.vue";
 import LayoutPreview from "@/components/multiview/LayoutPreview.vue";
 import Cell from "@/components/multiview/Cell.vue";
@@ -185,6 +267,7 @@ export default {
         PresetSelector,
         LayoutPreview,
         Cell,
+        PresetEditor,
     },
     mixins: [copyToClipboard],
     data() {
@@ -196,6 +279,7 @@ export default {
             mdiLinkVariant,
             mdiDelete,
             mdiCardPlus,
+            mdiContentSave,
 
             showSelectorForId: -1,
             shareDialog: false,
@@ -207,8 +291,9 @@ export default {
             overwriteMerge: false, // if the layout will be merged.
 
             showPresetSelector: false,
+            showPresetEditor: false,
 
-            layoutPreview: [],
+            layoutPreview: {},
         };
     },
     mounted() {
@@ -230,7 +315,7 @@ export default {
         Vue.use(VueYouTubeEmbed);
     },
     computed: {
-        ...mapState("multiview", ["layout", "layoutContent"]),
+        ...mapState("multiview", ["layout", "layoutContent", "presetLayout"]),
         ...mapGetters("multiview", ["activeVideos"]),
         // Return true if there's an id requesting, setting false is setting id to -1
         showVideoSelector: {
@@ -241,14 +326,13 @@ export default {
                 if (!open) this.showSelectorForId = -1;
             },
         },
-        exportURL() {
-            const layoutParam = `/${encodeURIComponent(
-                encodeLayout({
-                    layout: this.layout,
-                    contents: this.layoutContent,
-                }),
-            )}`;
-            return `${window.origin}/multiview${layoutParam}`;
+        decodedCustomPresets() {
+            return this.presetLayout.map((preset) => {
+                return {
+                    ...preset,
+                    ...decodeLayout(preset.layout),
+                };
+            });
         },
         decodedDesktopPresets() {
             return desktopPresets.map((preset) => {
@@ -258,8 +342,47 @@ export default {
                 };
             });
         },
+        decodedMobilePresets() {
+            return mobilePresets.map((preset) => {
+                return {
+                    ...preset,
+                    ...decodeLayout(preset.layout),
+                };
+            });
+        },
+        exportURL() {
+            if (!this.shareDialog) return "";
+            const layoutParam = `/${encodeURIComponent(
+                encodeLayout({
+                    layout: this.layout,
+                    contents: this.layoutContent,
+                    includeVideo: true,
+                }),
+            )}`;
+            return `${window.origin}/multiview${layoutParam}`;
+        },
+        isMobile() {
+            return this.$store.state.isMobile;
+        },
+        collapseButtons() {
+            return this.$vuetify.breakpoint.xs;
+        },
+        rowHeight() {
+            return (this.$vuetify.breakpoint.height - (this.collapseToolbar ? 0 : 64)) / 24.0;
+        },
+        columnWidth() {
+            return this.$vuetify.breakpoint.width / 24.0;
+        },
     },
     methods: {
+        setMuteAll(val) {
+            Object.keys(this.layoutContent).forEach((key) => {
+                const content = this.layoutContent[key];
+                if (content.type === "video") {
+                    this.$store.commit("multiview/muteLayoutContent", { id: key, value: val });
+                }
+            });
+        },
         // prompt user for layout change
         promptLayoutChange(layoutWithContent, confirmFunction, cancelFunction) {
             // a dialog is already active
@@ -272,7 +395,7 @@ export default {
                 return;
             }
             // show dialog with confirm or cancel functions
-            this.layoutPreview = layoutWithContent.layout;
+            this.layoutPreview = layoutWithContent;
             this.overwriteConfirm = () => {
                 // hide dialog
                 this.overwriteDialog = false;
@@ -299,6 +422,11 @@ export default {
             }, 200);
         },
         handleVideoClicked(video) {
+            if (this.showSelectorForId < -1) {
+                this.handleToolbarClick(video);
+                this.showSelectorForId = -1;
+                return;
+            }
             // set video for a specific cell id
             this.$store.commit("multiview/setLayoutContentById", {
                 id: this.showSelectorForId,
@@ -310,20 +438,20 @@ export default {
             this.showSelectorForId = -1;
         },
         handleToolbarShowSelector() {
-            // find an empty cell and show selector for it
-            const emptyCell = this.findEmptyCell();
-            if (emptyCell) {
-                this.showSelectorForId = emptyCell.i;
-            }
+            // Show selector and pass video to auto layout handler
+            this.showSelectorForId = -2;
         },
         handleToolbarClick(video) {
             const hasEmptyCell = this.findEmptyCell();
             // more cells needed, increment to next preset with space
             if (!hasEmptyCell) {
                 // find layout with space for one more new video
-                const newLayout = this.decodedDesktopPresets.find(
-                    (preset) => preset.emptyCells >= this.activeVideos.length + 1,
+                const presets = this.decodedCustomPresets.concat(
+                    this.isMobile ? this.decodedMobilePresets : this.decodedDesktopPresets,
                 );
+                const newLayout =
+                    presets.find((preset) => preset.emptyCells === this.activeVideos.length + 1) ??
+                    presets.find((preset) => preset.emptyCells >= this.activeVideos.length + 1);
 
                 // found new layout
                 if (newLayout) {
@@ -357,12 +485,14 @@ export default {
         },
         isPreset(currentLayout) {
             // filter out any presets that dont match the amount of cells
-            const toCompare = this.decodedDesktopPresets.filter((preset) => {
-                return preset.emptyCells && preset.layout.length === currentLayout.length;
-            });
+            const toCompare = this.decodedCustomPresets
+                .concat(this.isMobile ? this.decodedMobilePresets : this.decodedDesktopPresets)
+                .filter((preset) => {
+                    return preset.emptyCells && preset.layout.length === currentLayout.length;
+                });
 
             // there's no presets with equal cells
-            if (!toCompare) return false;
+            if (toCompare.length === 0) return false;
 
             let fullMatch = false;
 
@@ -431,7 +561,8 @@ export default {
         setMultiview({ layout, content, mergeContent = false }) {
             if (mergeContent) {
                 const contentsToMerge = {};
-                let activeVideosIndex = 0;
+                let currentIndex = 0;
+                const currentContent = Object.values(this.layoutContent).filter((o) => (o as any).type === "video");
                 // filter out already set items
                 layout
                     .filter((item) => {
@@ -439,17 +570,17 @@ export default {
                     })
                     .forEach((item) => {
                         // fill until there's no more current videos
-                        if (activeVideosIndex >= this.activeVideos.length) {
+                        if (currentIndex >= this.activeVideos.length) {
                             return;
                         }
-                        const key = item.i;
-                        contentsToMerge[key] = {
-                            type: "video",
-                            content: this.activeVideos[activeVideosIndex],
-                        };
-                        activeVideosIndex += 1;
-                    });
 
+                        // get next video to fill this item's cell
+                        const key = item.i;
+                        const c: any = currentContent[currentIndex];
+
+                        contentsToMerge[key] = c;
+                        currentIndex += 1;
+                    });
                 // merge by key, prefer incoming content
                 const merged = {
                     ...contentsToMerge,
@@ -460,6 +591,30 @@ export default {
                 this.$store.commit("multiview/setLayoutContent", content);
             }
             this.$store.commit("multiview/setLayout", layout);
+        },
+        handleDelete(id) {
+            // Check if preset and downgrade layout, if cell being deleted is video
+            if (this.isPreset(this.layout) && this.layoutContent[id] && this.layoutContent[id].type !== "chat") {
+                // Clear everything if it's 1 video 1 chat
+                if (this.layout.length - 1 <= 1) {
+                    this.clearAllItems();
+                    return;
+                }
+
+                // Find and set to previous preset layout
+                const presets = this.isMobile ? this.decodedMobilePresets : this.decodedDesktopPresets;
+                const newLayout = presets.find((preset) => preset.emptyCells >= this.activeVideos.length - 1);
+                const clonedLayout = JSON.parse(JSON.stringify(newLayout));
+                this.$store.commit("multiview/deleteLayoutContent", id);
+                this.setMultiview({
+                    ...clonedLayout,
+                    mergeContent: true,
+                });
+            }
+            // Default: delete item
+            else {
+                this.$store.commit("multiview/removeLayoutItem", id);
+            }
         },
         toggleFullScreen() {
             if (!document.fullscreenElement) {
@@ -476,6 +631,14 @@ export default {
 </script>
 
 <style lang="scss">
+.mv-background {
+    opacity: 0.75;
+    position: absolute;
+    width: 100%;
+    background-repeat: initial;
+    background-image: linear-gradient(to right, rgba(128, 128, 128, 0.15) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(128, 128, 128, 0.15) 1px, transparent 1px);
+}
 .mobile-helpers {
     -webkit-user-select: none;
     -khtml-user-select: none;
@@ -492,7 +655,7 @@ export default {
     }
 }
 .mv-toolbar-btn .v-btn.v-btn--icon.v-size--default {
-    margin-right: 4px;
+    // margin-right: 4px;
     height: 36px;
     width: 36px;
 }
@@ -519,5 +682,12 @@ export default {
 
 .vue-grid-layout {
     transition: none;
+}
+
+.mv-toolbar-btn.thin-scroll-bar::-webkit-scrollbar-track {
+    background: rgba(99, 46, 46, 0.5);
+}
+.mv-toolbar-btn.thin-scroll-bar::-webkit-scrollbar-thumb {
+    background: #f06291a2;
 }
 </style>

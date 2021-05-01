@@ -19,7 +19,7 @@
         <v-app-bar
             id="top-bar"
             :class="{
-                'secondary darken-3': darkMode,
+                'secondary darken-1': darkMode,
                 'primary lighten-1': !darkMode,
             }"
             :app="!isWatchPage"
@@ -108,6 +108,7 @@
                     <v-btn
                         icon
                         @click="$store.commit('music/openBar')"
+                        class="music-bar-open-btn"
                         v-if="!isMobile && $store.state.music.playlist.length > 0 && !$store.state.music.isOpen"
                     >
                         <v-icon>{{ icons.mdiMusic }}</v-icon>
@@ -115,7 +116,7 @@
                 </v-slide-y-transition>
                 <v-menu left offset-y transition="slide-y-transition" v-if="!isMobile">
                     <template v-slot:activator="{ on, attrs }">
-                        <v-btn icon v-bind="attrs" v-on="on">
+                        <v-btn icon v-bind="attrs" v-on="on" class="ml-2">
                             <v-icon v-if="!($store.state.userdata && $store.state.userdata.user)">{{
                                 icons.mdiAccountCircleOutline
                             }}</v-icon>
@@ -320,10 +321,9 @@ export default {
 
         // always pop out nav drawer if it's not watch page or collapsed
         if (
-            this.$route.name !== null &&
-            !this.isWatchPage &&
+            !window.location.pathname.match("^/watch|^/multiview|^/infinite") &&
             !this.isMobile &&
-            this.$vuetify.breakpoint.name !== "md"
+            !this.$vuetify.breakpoint.md
         ) {
             this.navDrawer = true;
         }
@@ -400,5 +400,22 @@ export default {
 
 .rotate-180 {
     transform: rotate(180deg);
+}
+
+.music-bar-open-btn {
+    animation-timing-function: ease-in-out;
+    animation: fadein 5s;
+    animation-iteration-count: 1;
+}
+
+@keyframes fadein {
+    0% {
+        opacity: 1;
+        background-color: #f06291;
+    }
+    100% {
+        opacity: 1;
+        background-color: #f0629100;
+    }
 }
 </style>

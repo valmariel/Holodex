@@ -59,32 +59,6 @@
             </template>
         </v-sheet>
 
-        <!-- Dragging handles -->
-        <!-- v-show is required. do not change to v-if, because it breaks the youtube frame. -->
-        <div class="mv-handlebars" v-show="pausedMode">
-            <v-icon style="bottom: 5px; right: 5px">
-                {{ mdiResizeBottomRight }}
-            </v-icon>
-            <v-icon style="bottom: 5px; left: 5px; transform: rotate(90deg)">
-                {{ mdiResizeBottomRight }}
-            </v-icon>
-            <v-icon style="top: 5px; left: 5px; transform: rotate(180deg)">
-                {{ mdiResizeBottomRight }}
-            </v-icon>
-            <v-icon style="top: 5px; right: 5px; transform: rotate(270deg)">
-                {{ mdiResizeBottomRight }}
-            </v-icon>
-            <v-icon style="top: calc(50% - 10px); left: 5px; transform: rotate(135deg)">
-                {{ mdiResizeBottomRight }}
-            </v-icon>
-            <v-icon style="top: calc(50% - 10px); right: 5px; transform: rotate(315deg)">
-                {{ mdiResizeBottomRight }}
-            </v-icon>
-            <v-icon style="bottom: 10px; left: calc(50% - 10px); transform: rotate(45deg)">
-                {{ mdiResizeBottomRight }}
-            </v-icon>
-        </div>
-
         <!--=== Video/Chat iFrame based on type ===-->
         <template v-if="cellContent">
             <v-sheet
@@ -99,7 +73,21 @@
                     v-if="cellContent.type === 'video' && cellContent.content.id"
                     :key="'v' + uniqueId"
                 >
+                    <VueTwitchPlayer
+                        v-if="isTwitchVideo"
+                        :channel="cellContent.content.id"
+                        :playsInline="true"
+                        @ready="vidReady"
+                        @ended="pausedMode = true"
+                        @play="vidPlaying({ data: 1 })"
+                        @pause="vidPlaying({ data: 2 })"
+                        @error="pausedMode = true"
+                        :mute="muted"
+                        ref="twitchPlayer"
+                    >
+                    </VueTwitchPlayer>
                     <youtube
+                        v-else
                         :key="'ytplayer-' + item.i + cellContent.content.id"
                         :video-id="cellContent.content.id"
                         :playerVars="{
@@ -111,12 +99,18 @@
                         @paused="vidPlaying"
                         @cued="pausedMode = true"
                         @error="pausedMode = true"
+                        :mute="muted"
                     >
                         <!--                         @buffering="pausedMode=true" -->
                     </youtube>
                 </div>
                 <template v-else-if="cellContent.type === 'chat'">
-                    <TabbedLiveChat :activeVideos="activeVideos" :setShowTL="toggleTL" :setShowChat="toggleChat" />
+                    <TabbedLiveChat
+                        :activeVideos="activeVideos"
+                        :setShowTL="toggleTL"
+                        :setShowChat="toggleChat"
+                        :id="item.i"
+                    />
                 </template>
             </v-sheet>
 
@@ -174,21 +168,10 @@
 </template>
 
 <script lang="ts">
-import { mdiMessage, mdiResizeBottomRight, mdiArrowLeftCircle } from "@mdi/js";
-// import { getVideoThumbnails } from "@/utils/functions";
+import { mdiMessage, mdiArrowLeftCircle } from "@mdi/js";
 import TabbedLiveChat from "@/components/multiview/TabbedLiveChat.vue";
 import { mapState, mapGetters } from "vuex";
-// import VideoCardList from "@/components/video/VideoCardList.vue";
-// import { dayjs } from "@/utils/time";
 import CellControl from "./CellControl.vue";
-
-// const HIDE_VIDEO_UNDER = {
-//     xs: 26,
-//     sm: 20,
-//     md: 15,
-//     lg: 8,
-//     xl: 6,
-// };
 
 export default {
     name: "Cell",
@@ -196,6 +179,7 @@ export default {
         TabbedLiveChat,
         // VideoCardList,
         CellControl,
+        VueTwitchPlayer: () => import("./TwitchPlayer.vue"),
     },
     props: {
         item: {
@@ -206,7 +190,6 @@ export default {
     data() {
         return {
             mdiMessage,
-            mdiResizeBottomRight,
             mdiArrowLeftCircle,
             pausedMode: true,
             uniqueId: Date.now(),
@@ -215,13 +198,37 @@ export default {
             toggleChat: true,
         };
     },
+    mounted() {
+        // initialize chat cell in non paused mode
+        if (this.cellContent?.type === "chat") this.pausedMode = false;
+        this.setLayoutFreeze();
+    },
     watch: {
-        cellContent(nw) {
-            if (nw === null) this.pausedMode = true;
+        cellContent(nw, old) {
+            // if cell becomes null or content changes to a different type, set paused mode back to true
+            if (!nw || (old && nw && nw.type !== old.type)) this.pausedMode = true;
+            if (nw && nw.type === "chat") this.pausedMode = false;
+            this.setLayoutFreeze();
+
+            if (
+                nw &&
+                nw.type === "video" &&
+                this.iOS() &&
+                this.$store.state.multiview.layout.find((item) => {
+                    return (
+                        item.i !== this.item.i &&
+                        this.layoutContent[item.i] &&
+                        this.layoutContent[item.i].type === "video" // &&
+                    );
+                })
+            ) {
+                this.muted = true;
+            } else {
+                this.muted = false;
+            }
         },
-        pausedMode(ow, nw) {
-            if (nw) this.$store.commit("multiview/freezeLayoutItem", this.item.i);
-            else this.$store.commit("multiview/unfreezeLayoutItem", this.item.i);
+        pausedMode(newMode) {
+            this.setLayoutFreeze(newMode);
         },
     },
     computed: {
@@ -236,6 +243,22 @@ export default {
         isVideo() {
             return this.cellContent.type === "video";
         },
+        isTwitchVideo() {
+            return (
+                this.cellContent &&
+                this.cellContent.type === "video" &&
+                this.cellContent.content.cellVideoType === "twitch"
+            );
+        },
+        muted: {
+            get() {
+                if (!this.cellContent) return false;
+                return this.cellContent.muted;
+            },
+            set(value) {
+                this.$store.commit("multiview/muteLayoutContent", { id: this.item.i, value });
+            },
+        },
     },
     methods: {
         // getVideoThumbnails,
@@ -248,13 +271,17 @@ export default {
             });
         },
         deleteCell() {
-            this.$store.commit("multiview/removeLayoutItem", this.item.i);
+            this.$emit("delete", this.item.i);
         },
         vidPlaying(evt) {
             this.pausedMode = evt.data === 2;
+            if (evt.data === 2 && this.iOS() && this.ytPlayer) {
+                this.ytPlayer.mute();
+                this.muted = true;
+            }
         },
         vidReady(evt) {
-            this.ytPlayer = evt.target;
+            if (evt) this.ytPlayer = evt.target;
         },
         resetCell() {
             this.$store.commit("multiview/deleteLayoutContent", this.item.i);
@@ -266,6 +293,19 @@ export default {
         toggleTLHandle() {
             this.toggleTL = !this.toggleTL;
             if (!this.toggleChat && !this.toggleTL) this.toggleChat = true;
+        },
+        iOS() {
+            return (
+                ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(
+                    navigator.platform,
+                ) ||
+                // iPad on iOS 13 detection
+                (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+            );
+        },
+        setLayoutFreeze(newMode = this.pausedMode) {
+            if (newMode) this.$store.commit("multiview/unfreezeLayoutItem", this.item.i);
+            else this.$store.commit("multiview/freezeLayoutItem", this.item.i);
         },
     },
 };

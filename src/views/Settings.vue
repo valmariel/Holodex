@@ -2,77 +2,122 @@
     <v-container>
         <v-row>
             <v-col>
-                <div class="text-h4">{{ $t("views.settings.title") }}</div>
-                <div class="pt-4">
-                    <v-icon>{{ icons.mdiTranslate }}</v-icon>
-                    Language:
-                </div>
-                <v-radio-group v-model="language" dense fluid>
-                    <!-- <template v-slot:label> </template> -->
-                    <v-radio v-for="l in langs" :key="l.val" :value="l.val">
-                        <template v-slot:label>
+                <div class="text-h4" v-if="!slim">{{ $t("views.settings.title") }}</div>
+                <div class="settings-group">
+                    <div class="py-1 text-h6">
+                        <v-icon>{{ icons.mdiTranslate }}</v-icon>
+                        {{ $t("views.settings.languageSettings") }}
+                    </div>
+                    <v-divider />
+                    <v-select :items="langs" item-value="val" v-model="language">
+                        <template v-slot:item="{ item }">
+                            <!-- {{item}} -->
                             <div>
-                                <span class="primary--text" style="font-weight: 500">{{ l.display }}</span>
-                                <span class="px-2 text--secondary text-caption"> ♡ {{ l.credit }}</span>
+                                <span class="primary--text" style="font-weight: 500">{{ item.display }}</span>
+                                <span class="px-2 text--secondary text-caption"> ♡ {{ item.credit }}</span>
                             </div>
                         </template>
-                    </v-radio>
-                </v-radio-group>
-                <div class="pt-4 mb-0">
-                    <v-icon>{{ mdiFilter }}</v-icon>
-                    {{ $t("views.settings.clipLanguageSelection") }}
+                        <template v-slot:selection="{ item }">
+                            <span class="primary--text" style="font-weight: 500">{{ item.display }}</span>
+                        </template>
+                    </v-select>
+                    <div class="pt-2 mb-0">
+                        <v-icon>{{ mdiFilter }}</v-icon>
+                        {{ $t("views.settings.clipLanguageSelection") }}
+                    </div>
+                    <v-select
+                        v-model="clipLangs"
+                        :items="TL_LANGS"
+                        multiple
+                        chips
+                        :hint="$t('views.settings.clipLanguageSelection')"
+                        persistent-hint
+                    >
+                    </v-select>
                 </div>
-                <v-select
-                    v-model="clipLangs"
-                    :items="TL_LANGS"
-                    multiple
-                    chips
-                    :hint="$t('views.settings.clipLanguageSelection')"
-                    persistent-hint
-                >
-                </v-select>
-                <v-switch
-                    v-model="darkMode"
-                    :label="$t('views.settings.darkModeLabel')"
-                    :messages="$t('views.settings.darkModeMsg')"
-                ></v-switch>
-                <v-switch
-                    v-model="defaultOpenFavorites"
-                    :label="$t('views.settings.defaultFavorites')"
-                    :messages="$t('views.settings.defaultFavoritesMsg')"
-                ></v-switch>
-                <v-switch
-                    v-model="redirectMode"
-                    :label="$t('views.settings.redirectModeLabel')"
-                    :messages="$t('views.settings.redirectModeMsg')"
-                ></v-switch>
-                <v-switch
-                    v-model="useEnName"
-                    :label="$t('views.settings.useEnglishNameLabel')"
-                    :messages="$t('views.settings.useEnglishNameMsg')"
-                ></v-switch>
-                <v-switch
-                    v-model="hideThumbnail"
-                    :label="$t('views.settings.hideVideoThumbnailsLabel')"
-                    :messages="$t('views.settings.hideVideoThumbnailsMsg')"
-                ></v-switch>
-                <!-- <v-switch
-                    :label="$t('views.settings.pushNotificationLabel')"
-                    :messages="$t('views.settings.pushNotificationMsg')"
-                    disabled
-                ></v-switch> -->
-                <v-switch
-                    v-model="autoplayVideo"
-                    :label="$t('views.settings.autoplayVideoLabel')"
-                    :messages="$t('views.settings.autoplayVideoMsg')"
-                ></v-switch>
-                <v-switch
-                    v-model="scrollMode"
-                    :label="$t('views.settings.scrollModeLabel')"
-                    :messages="$t('views.settings.scrollModeMsg')"
-                ></v-switch>
-                <br />
-                <v-btn @click="resetSettings">
+                <div class="settings-group">
+                    <div class="py-1 text-h6">{{ $t("views.settings.siteNavigationSettings") }}</div>
+                    <v-divider />
+                    <div class="d-flex justify-center">
+                        <v-switch
+                            class="mt-3"
+                            style="flex-basis: 50%"
+                            v-model="darkMode"
+                            :label="$t('views.settings.darkModeLabel')"
+                            :messages="$t('views.settings.darkModeMsg')"
+                        ></v-switch>
+                        <v-select
+                            class="ml-3 mt-3"
+                            hide-details
+                            label="Theme"
+                            v-model="themeId"
+                            :items="themeSet"
+                            item-value="id"
+                        >
+                            <template v-slot:item="{ item }">
+                                <div class="theme-preview">
+                                    <span :style="`background:${item.themes.dark.primary}`"></span>
+                                    <span :style="`background:${item.themes.dark.secondary}`"></span>
+                                    {{ item.name }}
+                                </div>
+                            </template>
+                            <template v-slot:selection="{ item }">
+                                <div class="theme-preview">
+                                    <span :style="`background:${item.themes.dark.primary}`"></span>
+                                    <span :style="`background:${item.themes.dark.secondary}`"></span>
+                                    {{ item.name }}
+                                </div>
+                            </template>
+                        </v-select>
+                    </div>
+                    <v-switch
+                        v-model="defaultOpenFavorites"
+                        :label="$t('views.settings.defaultFavorites')"
+                        :messages="$t('views.settings.defaultFavoritesMsg')"
+                    ></v-switch>
+                    <v-switch
+                        v-model="redirectMode"
+                        :label="$t('views.settings.redirectModeLabel')"
+                        :messages="$t('views.settings.redirectModeMsg')"
+                    ></v-switch>
+                    <v-switch
+                        v-model="scrollMode"
+                        :label="$t('views.settings.scrollModeLabel')"
+                        :messages="$t('views.settings.scrollModeMsg')"
+                    ></v-switch>
+                </div>
+                <div class="settings-group" v-if="!slim">
+                    <div class="py-1 text-h6">{{ $t("views.settings.videoFeedSettings") }}</div>
+                    <v-divider />
+                    <v-select
+                        class="mt-4"
+                        v-model="currentGridSize"
+                        :items="[
+                            { text: $t('views.settings.gridSize[0]'), value: 0 },
+                            { text: $t('views.settings.gridSize[1]'), value: 1 },
+                            { text: $t('views.settings.gridSize[2]'), value: 2 },
+                        ]"
+                        :label="$t('views.settings.gridSizeLabel')"
+                        :messages="$t('views.settings.gridSizeMsg')"
+                    ></v-select>
+                    <v-switch
+                        v-model="hideCollabStreams"
+                        :label="$t('views.settings.hideCollabStreamsLabel')"
+                        :messages="$t('views.settings.hideCollabStreamsMsg')"
+                    ></v-switch>
+                    <v-switch
+                        v-model="useEnName"
+                        :label="$t('views.settings.useEnglishNameLabel')"
+                        :messages="$t('views.settings.useEnglishNameMsg')"
+                    ></v-switch>
+                    <v-switch
+                        v-model="hideThumbnail"
+                        :label="$t('views.settings.hideVideoThumbnailsLabel')"
+                        :messages="$t('views.settings.hideVideoThumbnailsMsg')"
+                    ></v-switch>
+                </div>
+                <br v-if="!slim" />
+                <v-btn @click="resetSettings" v-if="!slim">
                     {{ $t("views.settings.resetAllSettings") }}
                 </v-btn>
             </v-col>
@@ -83,7 +128,9 @@
 <script lang="ts">
 import { langs } from "@/plugins/vuetify";
 import { mdiFilter } from "@mdi/js";
-import { TL_LANGS } from "@/utils/consts";
+import { themeSet, TL_LANGS } from "@/utils/consts";
+import { syncState } from "@/utils/functions";
+import Vue from "vue";
 
 export default {
     name: "Settings",
@@ -95,45 +142,28 @@ export default {
             },
         };
     },
+    props: {
+        slim: {
+            type: Boolean,
+            default: false,
+        },
+    },
     computed: {
-        language: {
+        ...syncState("settings", [
+            "darkMode",
+            "redirectMode",
+            // "autoplayVideo",
+            "scrollMode",
+            "hideThumbnail",
+            "defaultOpenFavorites",
+            "hideCollabStreams",
+        ]),
+        currentGridSize: {
             get() {
-                return this.$store.state.settings.lang;
+                return this.$store.state.currentGridSize;
             },
             set(val) {
-                this.$store.commit("settings/setLanguage", val);
-            },
-        },
-        darkMode: {
-            get() {
-                return this.$store.state.settings.darkMode;
-            },
-            set(val) {
-                this.$store.commit("settings/setDarkMode", val);
-            },
-        },
-        redirectMode: {
-            get() {
-                return this.$store.state.settings.redirectMode;
-            },
-            set(val) {
-                this.$store.commit("settings/setRedirectMode", val);
-            },
-        },
-        autoplayVideo: {
-            get() {
-                return this.$store.state.settings.autoplayVideo;
-            },
-            set(val) {
-                this.$store.commit("settings/setAutoplayVideo", val);
-            },
-        },
-        scrollMode: {
-            get() {
-                return this.$store.state.settings.scrollMode;
-            },
-            set(val) {
-                this.$store.commit("settings/setScrollMode", val);
+                this.$store.commit("setCurrentGridSize", val);
             },
         },
         useEnName: {
@@ -144,12 +174,13 @@ export default {
                 this.$store.commit("settings/setUseEnName", val);
             },
         },
-        hideThumbnail: {
+        language: {
             get() {
-                return this.$store.state.settings.hideThumbnail;
+                return this.$store.state.settings.lang;
             },
             set(val) {
-                this.$store.commit("settings/setHideThumbnail", val);
+                console.log(val);
+                this.$store.commit("settings/setLanguage", val);
             },
         },
         clipLangs: {
@@ -161,13 +192,24 @@ export default {
                 this.$store.commit("settings/setClipLangs", val.sort());
             },
         },
-        defaultOpenFavorites: {
-            get() {
-                return this.$store.state.settings.defaultOpenFavorites;
-            },
-            set(val) {
-                this.$store.commit("settings/setDefaultOpenFavorites", val);
-            },
+        theme() {
+            return this.$vuetify.theme;
+        },
+    },
+    watch: {
+        hideCollabStreams() {
+            this.$store.commit("favorites/setLastLiveUpdate", 0);
+        },
+        themeId(nw) {
+            localStorage.setItem("theme", `${nw}`);
+            Vue.set(this.$vuetify.theme.themes, "dark", {
+                ...this.$vuetify.theme.themes.dark,
+                ...themeSet[nw].themes.dark,
+            });
+            Vue.set(this.$vuetify.theme.themes, "light", {
+                ...this.$vuetify.theme.themes.light,
+                ...themeSet[nw].themes.light,
+            });
         },
     },
     data() {
@@ -175,6 +217,9 @@ export default {
             langs,
             mdiFilter,
             TL_LANGS,
+
+            themeId: +localStorage.getItem("theme") || 0,
+            themeSet,
         };
     },
     methods: {
@@ -185,4 +230,18 @@ export default {
 };
 </script>
 
-<style></style>
+<style>
+.settings-group {
+    padding: 12px;
+    border: 1px solid var(--v-primary-base);
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+.theme-preview span {
+    width: 2rem;
+    height: 1rem;
+    display: inline-block;
+    border-radius: 3px;
+    margin-left: 2px;
+}
+</style>

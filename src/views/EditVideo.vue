@@ -10,21 +10,24 @@
                             @ready="ready"
                             :playerVars="{
                                 ...(timeOffset && { start: timeOffset }),
-                                autoplay: $store.state.settings.autoplayVideo ? 1 : 0,
+                                autoplay: 1,
                                 playsinline: 1,
                             }"
                         >
                         </youtube>
                     </template>
                 </WatchFrame>
-                <WatchComments
-                    :comments="video.comments"
-                    :video="video"
-                    :limit="$store.state.isMobile ? 5 : 0"
-                    @timeJump="seekTo"
-                    key="comments"
-                    v-if="video && video.comments && video.comments.length"
-                />
+                <div class="comment-scroller">
+                    <WatchComments
+                        hideBuckets
+                        :comments="video.comments"
+                        :video="video"
+                        :limit="$store.state.isMobile ? 5 : 0"
+                        @timeJump="seekTo"
+                        key="comments"
+                        v-if="video && video.comments && video.comments.length"
+                    />
+                </div>
             </v-col>
             <v-col class="related-videos pt-0" :md="9" :lg="8">
                 <v-alert
@@ -37,30 +40,31 @@
                     <v-tabs v-model="currentTab">
                         <v-tab>{{ $t("component.search.type.topic") }}</v-tab>
                         <v-tab>{{ $t("component.mainNav.music") }}</v-tab>
-                        <v-tab disabled>Channel Mentions (in development)</v-tab>
-                        <v-tab disabled>Sources/Clips (in development)</v-tab>
+                        <v-tab disabled>{{ $t("views.editor.channelMentions.title") }}</v-tab>
+                        <v-tab disabled>{{ $t("views.editor.sources.title") }}</v-tab>
                     </v-tabs>
                     <v-col cols="12" class="pa-4">
                         <div v-show="currentTab === TABS.TOPIC">
                             <v-card-title>
                                 <v-icon left>{{ icons.mdiAnimationPlay }}</v-icon>
-                                <h5>Change stream topic</h5>
+                                <h5>{{ $t("views.editor.changeTopic.title") }}</h5>
                             </v-card-title>
                             <v-card-text>
                                 <p>
-                                    All users can assign topic to videos, but only editors and admins can remove and
-                                    change the topic once set.
+                                    {{ $t("views.editor.changeTopic.info") }}
                                 </p>
                                 <v-select :items="topics" label="Topic (leave empty to unset)" v-model="newTopic" />
                             </v-card-text>
                             <v-card-actions>
                                 <v-btn color="blue darken-1" text @click="saveTopic">
-                                    Save (May take 5 minutes to take effect)
+                                    {{ $t("views.editor.changeTopic.button") }}
                                 </v-btn>
                             </v-card-actions>
                         </div>
                         <div v-show="currentTab === TABS.MUSIC">
                             <VideoEditSongs
+                                id="musicEditor"
+                                ref="musicEditor"
                                 :video="video"
                                 :currentTime="currentTime"
                                 @timeJump="seekTo"
@@ -158,10 +162,14 @@ export default {
             this.player = event.target;
             this.setTimer();
         },
-        seekTo(time, playNow) {
+        seekTo(time, playNow, updateStartTime) {
             if (!this.player) return;
             this.player.seekTo(time);
             if (playNow) this.player.playVideo();
+            if (updateStartTime && this.currentTab === this.TABS.MUSIC) {
+                this.$refs.musicEditor && this.$refs.musicEditor.setStartTime(time);
+                // document.getElementById("musicEditor").scrollIntoView();
+            }
         },
         fetchVideo() {
             if (!this.id) throw new Error("Invalid id");
@@ -228,15 +236,10 @@ export default {
 </script>
 
 <style>
-.video-editor .embedded-chat {
-    position: relative;
-    min-height: 600px;
-}
-
-.video-editor .embedded-chat > iframe {
-    position: absolute;
-    width: 100%;
-    min-height: 600px;
+.video-editor .comment-scroller {
+    height: 400px;
+    height: 60vh;
+    overflow: hidden auto;
 }
 
 .video-editor .watch-card {

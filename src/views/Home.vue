@@ -1,7 +1,7 @@
 <template>
     <v-container fluid>
-        <LoadingOverlay :isLoading="isLoading" :showError="hasError" />
-        <div v-show="!isLoading && !hasError">
+        <LoadingOverlay :isLoading="false" :showError="hasError" />
+        <div v-show="!hasError">
             <div class="d-flex justify-space-between px-0 pb-3 pt-1 px-sm-3">
                 <div class="text-h6">
                     {{ $t("views.home.liveOrUpcomingHeading") }}
@@ -10,6 +10,7 @@
                     <v-icon>{{ $store.getters.gridIcon }}</v-icon>
                 </v-btn>
             </div>
+            <SkeletonCardList v-if="isLoading" :cols="colSizes" :limitRows="2" :dense="currentGridSize > 0" />
             <VideoCardList
                 :videos="live"
                 includeChannel
@@ -17,8 +18,10 @@
                 :limitRows="2"
                 :cols="colSizes"
                 :dense="currentGridSize > 0"
+                v-else
             >
             </VideoCardList>
+
             <v-divider class="my-3" />
             <div class="d-flex justify-space-between px-0 pb-3 pt-1 px-sm-3">
                 <div class="text-h6">
@@ -36,18 +39,17 @@
                     </v-btn>
                 </v-btn-toggle>
             </div>
-            <VideoCardList
-                :videos="videos"
-                includeChannel
-                :cols="colSizes"
-                :dense="currentGridSize > 0"
-                :lazy="scrollMode"
-                :identifier="identifier"
-                :paginateLoad="!scrollMode"
+            <generic-list-loader
                 :infiniteLoad="scrollMode"
-                @load="loadNext"
-                pageLess
-            ></VideoCardList>
+                :paginate="!scrollMode"
+                :perPage="this.pageLength"
+                :loadFn="getLoadFn()"
+                v-slot="{ data, isLoading }"
+                :key="'vl-home-' + recentVideoFilter + identifier"
+            >
+                <VideoCardList :videos="data" includeChannel :cols="colSizes" :dense="currentGridSize > 0" />
+                <SkeletonCardList v-if="isLoading" :cols="colSizes" :dense="currentGridSize > 0" />
+            </generic-list-loader>
         </div>
     </v-container>
 </template>
@@ -57,6 +59,9 @@ import VideoCardList from "@/components/video/VideoCardList.vue";
 import LoadingOverlay from "@/components/common/LoadingOverlay.vue";
 import { mapState } from "vuex";
 import reloadable from "@/mixins/reloadable";
+import backendApi from "@/utils/backend-api";
+import GenericListLoader from "@/components/video/GenericListLoader.vue";
+import SkeletonCardList from "@/components/video/SkeletonCardList.vue";
 
 export default {
     name: "Home",
@@ -71,10 +76,12 @@ export default {
     components: {
         VideoCardList,
         LoadingOverlay,
+        GenericListLoader,
+        SkeletonCardList,
     },
     data() {
         return {
-            identifier: +new Date(),
+            identifier: Date.now(),
             pageLength: 24,
         };
     },
@@ -82,22 +89,26 @@ export default {
         this.init();
     },
     watch: {
-        recentVideoFilter() {
-            this.resetVideos();
-        },
         // eslint-disable-next-line func-names
         "$store.state.currentOrg": function () {
             this.init();
         },
     },
     computed: {
-        ...mapState("home", ["live", "videos", "isLoading", "hasError", "currentOffset"]),
+        ...mapState("home", ["live", "isLoading", "hasError"]),
         recentVideoFilter: {
             get() {
                 return this.$store.state.home.recentVideoFilter;
             },
             set(value) {
                 this.$store.commit("home/setRecentVideoFilter", value);
+                this.identifier = Date.now();
+                this.$router.push({
+                    query: {
+                        ...this.$route.query,
+                        page: undefined,
+                    },
+                });
             },
         },
         scrollMode() {
@@ -125,38 +136,26 @@ export default {
         init() {
             this.$store.commit("home/resetState");
             this.$store.dispatch("home/fetchLive");
-            this.resetVideos();
-        },
-        resetVideos() {
-            this.$store.commit("home/resetVideos");
-            this.identifier = +new Date();
+            this.identifier = Date.now();
         },
         // called from mixin, simulate reload
         reload() {
             this.init();
         },
-        loadNext($state) {
-            const lastLength = this.videos.length;
-            if (!this.scrollMode) this.$store.commit("home/resetVideos");
-            this.$store
-                .dispatch("home/fetchNextVideos", {
-                    limit: this.pageLength,
-                    ...(!this.scrollMode && { offset: this.pageLength * ($state.page - 1) }),
-                })
-                .then(() => {
-                    if (
-                        (this.scrollMode && this.videos.length === lastLength) ||
-                        (!this.scrollMode && this.videos.length !== this.pageLength)
-                    ) {
-                        $state.completed();
-                        return;
-                    }
-                    $state.loaded();
-                })
-                .catch((e) => {
-                    console.error(e);
-                    $state.error();
+        getLoadFn() {
+            return async (offset, limit) => {
+                const res = await backendApi.videos({
+                    status: "past",
+                    ...(this.recentVideoFilter !== "all" && { type: this.recentVideoFilter }),
+                    include: "clips",
+                    org: this.$store.state.currentOrg,
+                    lang: this.$store.state.settings.clipLangs.join(","),
+                    paginated: !this.scrollMode,
+                    limit,
+                    offset,
                 });
+                return res.data;
+            };
         },
     },
 };

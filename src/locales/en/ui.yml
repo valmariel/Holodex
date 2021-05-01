@@ -1,8 +1,8 @@
 component:
   apiError:
     title: Gomenasorry!
-    textBeforeTwitter: 'There was an error retrieving content, please check twitter '
-    textAfterTwitter: ' or report an error through the'
+    textBeforeTwitter: "There was an error retrieving content, please check twitter "
+    textAfterTwitter: " or report an error through the"
     aboutPage: About page
     afterAboutPageHyperlink: .
   channelList:
@@ -10,9 +10,10 @@ component:
     unfavoriteAllInGroup: Unfavorite all in group
     favoriteAllInGroup: Favorite all in group
   channelInfo:
-    videoCount: '{0} Videos'
-    clipCount: '{n} Clips'
-    subscriberCount: '{n} Subscribers'
+    stats: Stats
+    videoCount: "{0} Videos"
+    clipCount: "{n} Clips"
+    subscriberCount: "{n} Subscribers"
     subscriberNA: Subscriber count unavailable
     totalViews: Total Views
   channelSocials:
@@ -20,6 +21,7 @@ component:
     removeFromFavorites: Remove from Favorites
     unblock: Unblock this channel
     block: Block this channel's content across Holodex
+    blocked: Blocked
   mainNav:
     home: Home
     favorites: Favorites
@@ -33,9 +35,10 @@ component:
     accountSettings: Account Settings
     music: Music
     multiview: MultiView
+    points: pts
   videoCard:
-    clips: '{n} Clips'
-    watching: '{0} Watching'
+    clips: "{n} Clips"
+    watching: "{0} Watching"
     liveNow: Live Now
     edit: Edit
     copiedToClipboard: Link copied to clipboard.
@@ -50,13 +53,16 @@ component:
   watch:
     streamingFor: Streaming for {0}
     nextUpInMugen: Next Up
+    Comments:
+      title: Comments
+      all: All
   search:
     searchLabel: Search
     type:
       channel: channel
       topic: topic
       org: org
-      titledesc: title & desc
+      titledesc: title/desc
       comments: comments
       videourl: video url
   relatedVideo:
@@ -91,7 +97,18 @@ component:
       popup: Install Holodex on iOS
       afterExportIcon: then 'Add to Home Screen
       beforeExportIcon: Tap
+  media:
+    remove: Remove
+  comment:
+    close: Close
+    readMore: Read more
 views:
+  channel:
+    video: Videos
+    clips: Clips
+    music: Music
+    collabs: Collabs
+    about: About
   channels:
     channelType: {}
     sortOptions:
@@ -177,12 +194,23 @@ views:
     scrollModeLabel: Scroll Mode
     scrollModeMsg: Use scroll/tap to turn pages
     resetAllSettings: Reset All Settings/Data
-    clipLanguageSelection: 'See Clips in these Languages:'
+    clipLanguageSelection: "See Clips in these Languages:"
     tlLanguageSelection: See live-chat TL in these languages
     defaultFavorites: Default open Favorites
     defaultFavoritesMsg: >-
       Open Favorites by default when visiting holodex.net, or clicking on the
       logo top left.
+    videoFeedSettings: Video Feed Settings
+    siteNavigationSettings: Site/Navigation
+    languageSettings: Language
+    gridSizeLabel: Thumbnail/Grid Size
+    gridSizeMsg: Change thumbnail/video grid size on Home/Favorites page
+    gridSize:
+      - Large
+      - Medium
+      - Small
+    hideCollabStreamsLabel: Hide Collab Streams
+    hideCollabStreamsMsg: Hide collab streams from your favorites feed
   app:
     update_available: An update is available
     update_btn: Update
@@ -203,6 +231,10 @@ views:
       TLSettingsTitle: TL Settings
       StickBottomSettingLabel: Stick Bottom (mobile)
       StickBottomSettingsDesc: TL box sticks to the bottom of chat (default stick to top on mobile)
+      showVerifiedMessages: Show Verified Messages
+      showModeratorMessages: Show Moderator Messages
+      tlFontSize: Font Size
+      tlWindowSize: TL Box Size (%), leave as 0% for automatic
       retryBtn: Retry
       status:
         reconnecting: Auto Reconnecting...
@@ -217,8 +249,20 @@ views:
       Create a list of favorite vtubers and see their latest clips and lives on
       this page.
     manageFavorites: Manage Favorites
+    close: Close
+    showall: Show All
   editor:
     needlogin: You'll need to login to make edits to Holodex video and song metadata.
+    changeTopic:
+      title: Change stream topic
+      info: >-
+        All users can assign topic to videos, but only editors and admins
+        can remove and change the topic once set.
+      button: Save (May take 5 minutes to take effect)
+    channelMentions:
+      title: Channel Mentions (in development)
+    sources:
+      title: Sources/Clips (in development)
   login:
     apikeyMsg: >-
       You can use API key to query Holodex API programmatically. Only one key
@@ -234,25 +278,46 @@ views:
     apikeyResetConfirm1: Are you sure you want to reset your API Key?
     apikeyResetConfirm2: The old API key will have 0-24 hours before expiring. Really reset?
     apikeyResetNvm: Nothing interesting happened.
+    with:
+      - Login with Google
+      - Login with Discord
+      - Login with Twitter
   multiview:
     confirmOverwrite: Overwrite current layout?
     confirmOverwriteYes: Confirm
     permalink: Permalink
     presets: Presets
     addframe: Add Cell
+    muteAll: Mute All
+    unmuteAll: Unmute All
+    autoLayoutTip: Click on a channel to start watching using auto layout mode
+    createLayoutTip:  Create your own layout by adding a cell, or using a preset
     preset:
       shareOnDiscord: >-
         Have a cool layout to share? Use the share button and let us know on our
         <a href="https://discord.gg/jctkgHBt4b">Discord server</a>!
+      custom: My Layouts
+      toggleAutoLayout: Toggle use layout in auto
+      remove: Delete
       desktop: Desktop
       mobile: Mobile
+    presetEditor:
+      title: Save Layout
+      name: Name
+      autoLayout: Use layout in auto mode
     video:
       selectLive: Select Live
       addCustomVideo: Add Custom Video
+  mugen:
+    welcome: >-
+      Welcome to MugenClips! Everyone on this page is seeing the same randomly
+      selected English Hololive clip. Watch along and chat with Hololive fans
+      from across the world. If you skip ahead and want to be re-sync'd with
+      everyone, please refresh the page.
 time:
   soon: soon
   diff_future_date: Starts {0} ({1})
-  distance_past_date: '{0}'
+  distance_past_date: "{0}"
 editor:
   music:
     add: Add
@@ -263,8 +328,8 @@ editor:
       href='/about'>discord</a> to notify editors of issues / abuse, or apply to
       become an editor.
     titles:
-      addSong: 'Song Metadata: Add a new Song'
-      songList: 'Song List : {0}'
+      addSong: "Song Metadata: Add a new Song"
+      songList: "Song List : {0}"
       help: Guide
     itunesLookupPlaceholder: (Optional) Lookup on iTunes
     moveRight2s: Move right 2s
@@ -275,7 +340,7 @@ editor:
     originalArtistInput: Original Artist
     testStart: Test the start
     startInput: Start
-    endInput: 'Duration in seconds: (end @ {0})'
+    endInput: "Duration in seconds: (end @ {0})"
   exitMode: Exit Edit Mode
   enterMode: Edit Video
 about:
@@ -312,6 +377,62 @@ about:
       Sad to see you go :(, please let me know if there's any issue I can help
       you with. If you would still like to have it removed, please send us a
       message on Discord.
+    favorite:
+      title: What are favorites?
+      Contents:
+        - >-
+          Favorites are a way to stay on top of your favorite vtubers, you can
+          add your favorite channels by clicking the heart icon on the
+        - >-
+          page. Please note that favoriting subbers is currently not supported,
+          but you should still consider subscribing and supporting them in other
+          ways!
+      disappear:
+        title: My favorites list disappeared / I cannot favorite
+      contents:
+        - >-
+          Please make sure you are logged in and visit the channels favorites
+          tab to force a refresh.
+    mobile:
+      title: Is there an Android/iOS app for Holodex?
+      content:
+        summary: >-
+          We are working on it! In the mean time, please use the "Add to Home"
+          feature on your browser. We have tuned it a lot to behave like an app
+        android:
+          - "Android Chrome: Navigate to the site, click the three dots"
+          - on the top right and find "Add to Home Screen".
+        ios:
+          - >-
+            iOS Safari: Navigate to the site on your phone, click the square
+            with arrow pointing up
+          - at the bottom of safari, and click "Add to Home Screen"
+    MugenClips:
+      title: What is MugenClips?
+      contents:
+        - >-
+          MugenClips, or infinite clips, is a watch along party where people on
+          the site can watch a constantly rotating variety of clips uploaded by
+          the many community translation channels
+    subber:
+      title: I'm a subber and can't find my channel or clips on Holodex
+      contents:
+        - >-
+          Please check on the Channels page to see if you are listed as a
+          subber, if not please fill out
+        - this form
+        - >-
+          , and we will add you manually. If you are already on the list, please
+          make sure your video descriptions have the correct youtube
+          source/channel links.
+    feedback:
+      title: I have feedback/want to contribute to this project
+      contents:
+        - >-
+          All help and ideas are welcome! The UI and Backend are both available
+          for contribution, although only the UI is open source currently.
+          Please contact us on discord to gain access to backend source, or
+          simply chat about your ideas.
   gdpr: GDPR and my data
   gdprContent: >-
     A Google Analytics cookie is used to track pageviews for our analytical
@@ -325,3 +446,20 @@ about:
     href="https://github.com/RiceCakess/Holodex/issues"> Github Issue Tracker
     </a> or find the Holodex team on Discord <br /> <br /> Reddit: <a
     href="https://www.reddit.com/user/Rice_Cakess/"> u/Rice_cakess </a>
+  credits:
+    title: Credits
+    contents:
+      - I would like to give big thanks to the
+      - team for their work on
+      - >-
+        Also to all the subbers for helping the overseas bros! Please check them
+        out!
+      - >-
+        This is a fan made website and the content found on this website is
+        owned by Cover corp and its partners. The site follows the guidelines
+        set forth by Cover corp in their
+      - Derivative Work License Agreement
+  changelog:
+    title: Changelog
+  news:
+    title: News

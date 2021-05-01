@@ -6,7 +6,14 @@
             </v-tab>
         </v-tabs>
         <template v-if="activeVideos.length && currentTab >= 0">
+            <iframe
+                :src="twitchChatLink"
+                v-if="activeVideos[currentTab || 0].cellVideoType === 'twitch'"
+                style="width: 100%; height: calc(100% - 32px)"
+            >
+            </iframe>
             <WatchLiveChat
+                v-else
                 :video="activeVideos[currentTab || 0]"
                 style="width: 100%; height: calc(100% - 32px)"
                 :key="'wlc' + activeVideos[currentTab || 0].id"
@@ -40,6 +47,10 @@ export default {
             type: Boolean,
             default: false,
         },
+        id: {
+            type: [String, Number],
+            required: true,
+        },
     },
     data() {
         return {
@@ -51,9 +62,39 @@ export default {
             // showLiveChat: true,
         };
     },
+    mounted() {
+        this.currentTab = this.savedTab;
+    },
+    computed: {
+        savedTab: {
+            get() {
+                if (
+                    !this.$store.state.multiview.layoutContent[this.id] ||
+                    !this.$store.state.multiview.layoutContent[this.id].currentTab
+                ) {
+                    return 0;
+                }
+                return this.$store.state.multiview.layoutContent[this.id].currentTab;
+            },
+            set(val) {
+                const obj = this.$store.state.multiview.layoutContent[this.id];
+                obj.currentTab = val;
+                return this.$store.commit("multiview/setLayoutContentById", {
+                    id: this.id,
+                    content: obj,
+                });
+            },
+        },
+        twitchChatLink() {
+            return `https://www.twitch.tv/embed/${this.activeVideos[this.currentTab || 0].id}/chat?parent=${
+                window.location.hostname
+            }`;
+        },
+    },
     watch: {
         currentTab() {
-            this.showTLFirstTime = true;
+            this.showTLFirstTime = false;
+            this.savedTab = this.currentTab;
         },
         setShowTL(nw) {
             if (!this.showTLFirstTime) {
